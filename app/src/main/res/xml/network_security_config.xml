@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Configuration for Adchain SDK Sample App
+  
+  This configuration allows cleartext (HTTP) traffic for development purposes only.
+  In production apps, always use HTTPS and remove cleartext permissions.
+  
+  Allowed domains:
+  - 10.0.2.2: Android Emulator's alias for host machine's localhost
+  - localhost: For physical device testing with local server
+  - 127.0.0.1: Alternative localhost address
+  - 211.192.161.36: Adchain SDK development server
+  
+  IMPORTANT: This is for DEVELOPMENT ONLY. Remove or modify for production use.
+-->
+<network-security-config>
+    <!-- Development environment configuration -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android Emulator localhost -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Physical device localhost (requires port forwarding) -->
+        <domain includeSubdomains="true">localhost</domain>
+        <!-- Alternative localhost -->
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- Adchain SDK development server -->
+        <domain includeSubdomains="false">211.192.161.36</domain>
+    </domain-config>
+    
+    <!-- Base configuration for all other domains -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
