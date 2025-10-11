@@ -29,11 +29,15 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var loginContainer: LinearLayout
     private lateinit var menuContainer: LinearLayout
+    private lateinit var initSdkButton: MaterialButton
     private lateinit var userIdInput: TextInputEditText
     private lateinit var userIdInputLayout: TextInputLayout
     private lateinit var loginButton: MaterialButton
+    private lateinit var skipLoginButton: MaterialButton
     private lateinit var logoutButton: MaterialButton
     private lateinit var userInfoText: TextView
+    private var isSkipMode = false  // Track if user skipped login for testing
+    private var isSdkInitialized = false  // Track SDK initialization status
     
     private lateinit var quizButton: MaterialButton
     private lateinit var missionButton: MaterialButton
@@ -52,9 +56,11 @@ class MainActivity : AppCompatActivity() {
     private fun initializeViews() {
         loginContainer = findViewById(R.id.loginContainer)
         menuContainer = findViewById(R.id.menuContainer)
+        initSdkButton = findViewById(R.id.initSdkButton)
         userIdInput = findViewById(R.id.userIdInput)
         userIdInputLayout = findViewById(R.id.userIdInputLayout)
         loginButton = findViewById(R.id.loginButton)
+        skipLoginButton = findViewById(R.id.skipLoginButton)
         logoutButton = findViewById(R.id.logoutButton)
         userInfoText = findViewById(R.id.userInfoText)
         
@@ -65,10 +71,18 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun setupListeners() {
+        initSdkButton.setOnClickListener {
+            performSdkInitialization()
+        }
+
         loginButton.setOnClickListener {
             performLogin()
         }
-        
+
+        skipLoginButton.setOnClickListener {
+            performSkipLogin()
+        }
+
         logoutButton.setOnClickListener {
             performLogout()
         }
@@ -83,25 +97,29 @@ class MainActivity : AppCompatActivity() {
         
         adchainHubButton.setOnClickListener {
             // Use the new SDK API to open offerwall directly
-            AdchainSdk.openOfferwall(this, object : com.adchain.sdk.offerwall.OfferwallCallback {
-                override fun onOpened() {
-                    Log.d(TAG, "Offerwall opened successfully")
+            AdchainSdk.openOfferwall(
+                context = this,
+                placementId = "main_adchain_hub",
+                callback = object : com.adchain.sdk.offerwall.OfferwallCallback {
+                    override fun onOpened() {
+                        Log.d(TAG, "Offerwall opened successfully")
+                    }
+
+                    override fun onClosed() {
+                        Log.d(TAG, "Offerwall closed by user")
+                    }
+
+                    override fun onError(message: String) {
+                        Log.e(TAG, "Offerwall error: $message")
+                        Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                    }
+
+                    override fun onRewardEarned(amount: Int) {
+                        Log.d(TAG, "User earned reward: $amount")
+                        Toast.makeText(this@MainActivity, "You earned $amount points!", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                
-                override fun onClosed() {
-                    Log.d(TAG, "Offerwall closed by user")
-                }
-                
-                override fun onError(message: String) {
-                    Log.e(TAG, "Offerwall error: $message")
-                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
-                }
-                
-                override fun onRewardEarned(amount: Int) {
-                    Log.d(TAG, "User earned reward: $amount")
-                    Toast.makeText(this@MainActivity, "You earned $amount points!", Toast.LENGTH_SHORT).show()
-                }
-            })
+            )
         }
         
         bannerButton.setOnClickListener {
@@ -153,11 +171,37 @@ class MainActivity : AppCompatActivity() {
         })
     }
     
+    private fun performSdkInitialization() {
+        if (isSdkInitialized) {
+            Toast.makeText(this, "SDK already initialized", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        Log.d(TAG, "Initializing SDK...")
+        try {
+            SampleApplication.instance.initializeAdchainSdk()
+            isSdkInitialized = true
+            Toast.makeText(this, "SDK initialized successfully", Toast.LENGTH_SHORT).show()
+            updateUI()
+        } catch (e: Exception) {
+            Log.e(TAG, "SDK initialization failed", e)
+            Toast.makeText(this, "SDK initialization failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun performSkipLogin() {
+        Log.d(TAG, "Skipping login for testing without SDK initialization")
+        isSkipMode = true
+        Toast.makeText(this, "Test mode: SDK not initialized, testing graceful error handling", Toast.LENGTH_SHORT).show()
+        updateUI()
+    }
+
     private fun performLogout() {
         Log.d(TAG, "Performing logout")
-        
+
         // Actual SDK logout
         AdchainSdk.logout()
+        isSkipMode = false
         Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
         updateUI()
     }
@@ -172,12 +216,14 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Banner loaded successfully")
                 runOnUiThread {
                     // 팝업으로 Banner 데이터 표시
+                    val linkUrl = bannerResponse.internalLinkUrl ?: bannerResponse.externalLinkUrl ?: "N/A"
                     val message = """
                         Banner Data Received:
-                        
+
                         Title: ${bannerResponse.titleText}
                         Image URL: ${bannerResponse.imageUrl}
-                        Link URL: ${bannerResponse.linkUrl}
+                        Link Type: ${bannerResponse.linkType}
+                        Link URL: $linkUrl
                     """.trimIndent()
                     
                     AlertDialog.Builder(this)
@@ -202,15 +248,30 @@ class MainActivity : AppCompatActivity() {
     
     private fun updateUI() {
         val isLoggedIn = AdchainSdk.isLoggedIn
-        
-        if (isLoggedIn) {
-            loginContainer.visibility = View.GONE
-            menuContainer.visibility = View.VISIBLE
-            userInfoText.text = "Logged in as: ${AdchainSdk.getCurrentUser()?.userId ?: "Unknown"}"
-        } else {
-            loginContainer.visibility = View.VISIBLE
-            menuContainer.visibility = View.GONE
-            userIdInput.setText("")
+
+        // Update SDK init button state
+        initSdkButton.isEnabled = !isSdkInitialized
+        initSdkButton.text = if (isSdkInitialized) "SDK Initialized ✓" else "Initialize SDK"
+
+        when {
+            // Skip mode: Show menu without SDK initialization
+            isSkipMode -> {
+                loginContainer.visibility = View.GONE
+                menuContainer.visibility = View.VISIBLE
+                userInfoText.text = "⚠️ Test Mode: SDK Not Initialized\nTesting graceful error handling"
+            }
+            // Normal flow: Logged in
+            isLoggedIn -> {
+                loginContainer.visibility = View.GONE
+                menuContainer.visibility = View.VISIBLE
+                userInfoText.text = "✓ Logged in as: ${AdchainSdk.getCurrentUser()?.userId ?: "Unknown"}"
+            }
+            // Show login screen
+            else -> {
+                loginContainer.visibility = View.VISIBLE
+                menuContainer.visibility = View.GONE
+                userIdInput.setText("")
+            }
         }
     }
     

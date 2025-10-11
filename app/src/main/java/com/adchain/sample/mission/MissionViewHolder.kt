@@ -46,7 +46,10 @@ class MissionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             when (mission.type) {
                 MissionType.OFFERWALL_PROMOTION -> {
                     // 오퍼월 프로모션인 경우 오퍼월 열기
-                    com.adchain.sdk.core.AdchainSdk.openOfferwall(context)
+                    com.adchain.sdk.core.AdchainSdk.openOfferwall(
+                        context = context,
+                        placementId = "mission_item_promotion"
+                    )
                 }
                 else -> {
                     // 일반 미션인 경우 미션 클릭 처리

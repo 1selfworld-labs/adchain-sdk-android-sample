@@ -86,7 +86,10 @@ class MissionActivity : AppCompatActivity() {
         // Set click listeners
         missionEmptyBanner.setOnClickListener {
             Log.d(TAG, "Opening offerwall from empty banner")
-            com.adchain.sdk.core.AdchainSdk.openOfferwall(this)
+            com.adchain.sdk.core.AdchainSdk.openOfferwall(
+                context = this,
+                placementId = "mission_empty_banner"
+            )
         }
         
         retryButton.setOnClickListener {
@@ -105,7 +108,7 @@ class MissionActivity : AppCompatActivity() {
         showLoadingState()
         
         // Initialize AdchainMission
-        adchainMission = AdchainMission("mission_unit_id")
+        adchainMission = AdchainMission()
         
         // Set up mission adapter
         missionAdapter = MissionAdapter(this, adchainMission!!)

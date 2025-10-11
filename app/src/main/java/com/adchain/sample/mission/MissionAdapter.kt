@@ -73,7 +73,10 @@ class MissionAdapter(
             
             container.setOnClickListener {
                 // Open offerwall when promotion is tapped
-                AdchainSdk.openOfferwall(context)
+                AdchainSdk.openOfferwall(
+                    context = context,
+                    placementId = "mission_offerwall_promotion"
+                )
             }
         }
     }

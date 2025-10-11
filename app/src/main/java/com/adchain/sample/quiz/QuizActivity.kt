@@ -65,7 +65,10 @@ class QuizActivity : AppCompatActivity() {
         emptyBanner.setOnClickListener {
             // Open offerwall main
             Log.d(TAG, "Opening offerwall from empty banner")
-            com.adchain.sdk.core.AdchainSdk.openOfferwall(this)
+            com.adchain.sdk.core.AdchainSdk.openOfferwall(
+                context = this,
+                placementId = "quiz_empty_banner"
+            )
         }
         
         retryButton.setOnClickListener {
@@ -84,7 +87,7 @@ class QuizActivity : AppCompatActivity() {
         showLoadingState()
         
         // Initialize AdchainQuiz
-        adchainQuiz = AdchainQuiz("quiz_unit_id")
+        adchainQuiz = AdchainQuiz()
         
         // Set up quiz adapter
         quizAdapter = QuizAdapter(this, adchainQuiz!!)
@@ -92,7 +95,8 @@ class QuizActivity : AppCompatActivity() {
         
         // Load quiz events using getQuizList
         adchainQuiz?.getQuizList(
-            onSuccess = { events ->
+            onSuccess = { quizResponse ->
+                val events = quizResponse.events
                 runOnUiThread {
                     when {
                         events.isEmpty() -> {
