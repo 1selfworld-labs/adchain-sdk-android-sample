@@ -149,9 +149,18 @@
             android:id="@+id/bannerButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="8dp"
             android:text="Banner Test"
             app:icon="@android:drawable/ic_menu_gallery"
+            app:iconGravity="start" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/adjoeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:text="Adjoe Offerwall Test"
+            app:icon="@android:drawable/ic_menu_compass"
             app:iconGravity="start" />
 
         <com.google.android.material.button.MaterialButton

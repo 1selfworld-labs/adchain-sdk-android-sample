@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/donghoon/Desktop/GIT/fly33499/ad-chain-sdk/adchain-sdk-android/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

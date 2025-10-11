@@ -60,9 +60,9 @@ dependencies {
     // Image Loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
     
-    // Adchain SDK - Using local module
+    // Adchain SDK - Using local module (adjoe SDK included automatically)
     implementation(project(":adchain-sdk"))
-    
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

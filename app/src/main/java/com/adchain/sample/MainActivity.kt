@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var missionButton: MaterialButton
     private lateinit var adchainHubButton: MaterialButton
     private lateinit var bannerButton: MaterialButton
+    private lateinit var adjoeButton: MaterialButton
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
         missionButton = findViewById(R.id.missionButton)
         adchainHubButton = findViewById(R.id.adchainHubButton)
         bannerButton = findViewById(R.id.bannerButton)
+        adjoeButton = findViewById(R.id.adjoeButton)
     }
     
     private fun setupListeners() {
@@ -125,8 +127,45 @@ class MainActivity : AppCompatActivity() {
         bannerButton.setOnClickListener {
             performBannerTest()
         }
+
+        adjoeButton.setOnClickListener {
+            performAdjoeTest()
+        }
     }
-    
+
+    private fun performAdjoeTest() {
+        Log.d(TAG, "Starting Adjoe Offerwall Test")
+
+        // SDK의 Adjoe API 호출
+        AdchainSdk.openAdjoeOfferwall(
+            context = this,
+            placementId = "main_adjoe_test",
+            callback = object : com.adchain.sdk.offerwall.OfferwallCallback {
+                override fun onOpened() {
+                    Log.d(TAG, "Adjoe Offerwall opened successfully")
+                }
+
+                override fun onClosed() {
+                    Log.d(TAG, "Adjoe Offerwall closed by user")
+                }
+
+                override fun onError(message: String) {
+                    Log.e(TAG, "Adjoe Offerwall error: $message")
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Adjoe Error: $message", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                override fun onRewardEarned(amount: Int) {
+                    Log.d(TAG, "Adjoe reward earned: $amount")
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Adjoe reward: $amount points!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        )
+    }
+
     private fun performLogin() {
         val userId = userIdInput.text?.toString()?.trim()
         

@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Adjoe SDK Maven repository
+        maven { url = uri("https://releases.adjoe.io/maven") }
     }
 }
 
