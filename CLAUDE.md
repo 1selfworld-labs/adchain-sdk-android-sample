@@ -1,77 +1,325 @@
-# AdchainSDK Android Sample 프로젝트
+# AdChain SDK Android Sample - 개발자 가이드
 
 ## 프로젝트 개요
-AdchainSDK Android 샘플 애플리케이션으로, SDK의 주요 기능들을 테스트하고 통합 방법을 보여주는 예제 프로젝트입니다.
+
+AdChain SDK Android 샘플 애플리케이션으로, SDK의 주요 기능들을 테스트하고 통합 방법을 보여주는 예제 프로젝트입니다.
+
+이 프로젝트는 **SDK 초기화 제어**, **사용자 인증**, **Quiz/Mission/Offerwall/Banner 통합**을 시연하며, 특히 **SDK 미초기화 상태에서의 graceful error handling**을 테스트할 수 있도록 설계되었습니다.
 
 ## 프로젝트 구조
+
 ```
-AdchainSDK-Android-Sample/
-├── app/                         # 샘플 앱 모듈
-│   ├── src/main/java/          # 소스 코드
-│   │   └── com/adchain/sample/
-│   │       ├── MainActivity.kt  # 메인 화면
-│   │       ├── mission/        # 미션 시스템
-│   │       ├── quiz/          # 퀴즈 시스템
-│   │       └── offerwall/     # 오퍼월
-│   └── src/main/res/          # 리소스 파일
-├── build.gradle.kts           # 루트 빌드 설정
-└── settings.gradle.kts        # 프로젝트 설정
+adchain-sdk-android-sample/
+├── app/                                    # 샘플 앱 모듈
+│   ├── src/main/java/com/adchain/sample/
+│   │   ├── MainActivity.kt                 # 메인 화면 (SDK 초기화, 로그인, 메뉴)
+│   │   ├── SampleApplication.kt            # Application 클래스 (SDK 초기화 로직)
+│   │   ├── quiz/
+│   │   │   ├── QuizActivity.kt            # Quiz 목록 및 참여
+│   │   │   ├── QuizAdapter.kt             # RecyclerView 어댑터
+│   │   │   └── QuizViewHolder.kt          # ViewHolder
+│   │   └── mission/
+│   │       ├── MissionActivity.kt         # Mission 목록 및 관리
+│   │       ├── MissionAdapter.kt          # RecyclerView 어댑터
+│   │       └── MissionViewHolder.kt       # ViewHolder
+│   ├── src/main/res/
+│   │   ├── layout/                        # XML 레이아웃 파일
+│   │   │   ├── activity_main.xml         # 메인 화면 레이아웃
+│   │   │   ├── activity_quiz.xml         # Quiz 화면 레이아웃
+│   │   │   ├── activity_mission.xml      # Mission 화면 레이아웃
+│   │   │   ├── item_quiz.xml             # Quiz 아이템 레이아웃
+│   │   │   ├── item_mission.xml          # Mission 아이템 레이아웃
+│   │   │   └── item_offerwall_promotion.xml
+│   │   ├── drawable/                      # 아이콘 및 drawable 리소스
+│   │   ├── values/                        # 색상, 문자열, 테마
+│   │   │   ├── colors.xml
+│   │   │   ├── strings.xml
+│   │   │   └── themes.xml
+│   │   └── xml/                           # 설정 파일
+│   │       ├── network_security_config.xml
+│   │       ├── backup_rules.xml
+│   │       └── data_extraction_rules.xml
+│   └── AndroidManifest.xml
+├── build.gradle.kts                       # 루트 빌드 설정
+├── settings.gradle.kts                    # 프로젝트 설정 (SDK 모듈 연결)
+├── gradle.properties                      # Gradle 프로퍼티
+├── README.md                              # 사용자 문서
+└── CLAUDE.md                              # 개발자 가이드 (이 문서)
 ```
 
 ## SDK 모듈 연결
-이 프로젝트는 상위 폴더의 `adchain-sdk-android` 프로젝트를 직접 참조합니다:
-- 경로: `../adchain-sdk-android/adchain-sdk`
-- SDK 코드 수정 시 샘플 앱에 즉시 반영됨
 
-## 주요 기능
-- **사용자 로그인**: SDK 초기화 및 사용자 인증
-- **퀴즈 시스템**: 퀴즈 참여 및 보상
-- **미션 시스템**: 다양한 미션 수행
-- **오퍼월**: 광고 참여 및 포인트 획득
+이 프로젝트는 상위 폴더의 `adchain-sdk-android` 프로젝트를 **로컬 모듈**로 직접 참조합니다:
+
+### settings.gradle.kts 설정
+```kotlin
+rootProject.name = "AdchainSample"
+include(":app")
+include(":adchain-sdk")
+project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
+```
+
+### 장점
+- SDK 코드 수정 시 샘플 앱에 **즉시 반영**
+- 빌드 시간 단축 (매번 SDK 재빌드 불필요)
+- 디버깅 용이
+
+### 주의사항
+- 상위 폴더에 `adchain-sdk-android` 프로젝트가 반드시 존재해야 함
+- SDK 프로젝트의 폴더 구조 변경 시 경로 업데이트 필요
+
+## 주요 기능 및 변경사항
+
+### 1. SDK 초기화 제어 (NEW)
+
+**변경 이유**: SDK 미초기화 상태에서 graceful error handling 테스트를 위해
+
+#### Before (자동 초기화)
+```kotlin
+// SampleApplication.kt
+override fun onCreate() {
+    super.onCreate()
+    instance = this
+    initializeAdchainSdk()  // 자동 초기화
+}
+```
+
+#### After (수동 초기화)
+```kotlin
+// SampleApplication.kt
+override fun onCreate() {
+    super.onCreate()
+    instance = this
+
+    // SDK 초기화를 자동으로 하지 않음
+    // MainActivity에서 선택적으로 초기화할 수 있도록 함
+    Log.d(TAG, "Application created - SDK initialization skipped for testing")
+}
+
+// 외부에서 호출 가능한 초기화 함수
+fun initializeAdchainSdk() {
+    Log.d(TAG, "Initializing Adchain SDK...")
+
+    // SDK 로그 레벨 설정
+    AdchainSdk.setLogLevel(LogLevel.VERBOSE)
+
+    val config = AdchainSdkConfig.Builder(APP_ID, APP_SECRET)
+        .setEnvironment(AdchainSdkConfig.Environment.DEVELOPMENT)
+        .setTimeout(30000L)
+        .build()
+
+    AdchainSdk.initialize(this, config)
+
+    Log.d(TAG, "Adchain SDK initialized successfully with App ID: $APP_ID")
+}
+```
+
+### 2. 3가지 테스트 플로우 지원
+
+#### Flow 1: 정상 플로우 (Initialize → Login)
+1. "Initialize SDK" 버튼 클릭
+2. User ID 입력
+3. "Login" 버튼 클릭
+4. 메뉴 화면 표시
+
+#### Flow 2: Skip Login (SDK 미초기화 테스트)
+1. "Skip Login (Test without initialization)" 버튼 클릭
+2. 메뉴 화면 표시 (경고 메시지)
+3. 각 기능 클릭 시 graceful error 확인
+
+#### Flow 3: 혼합 플로우 (Initialize → Skip Login)
+1. "Initialize SDK" 버튼 클릭
+2. "Skip Login" 버튼 클릭
+3. 메뉴 화면 표시 (SDK 초기화는 됨, 로그인은 안 됨)
+
+### 3. UI 상태 관리 (3-State)
+
+```kotlin
+// MainActivity.kt - updateUI()
+private fun updateUI() {
+    val isLoggedIn = AdchainSdk.isLoggedIn
+
+    // Update SDK init button state
+    initSdkButton.isEnabled = !isSdkInitialized
+    initSdkButton.text = if (isSdkInitialized) "SDK Initialized ✓" else "Initialize SDK"
+
+    when {
+        // Skip mode: Show menu without SDK initialization
+        isSkipMode -> {
+            loginContainer.visibility = View.GONE
+            menuContainer.visibility = View.VISIBLE
+            userInfoText.text = "⚠️ Test Mode: SDK Not Initialized\nTesting graceful error handling"
+        }
+        // Normal flow: Logged in
+        isLoggedIn -> {
+            loginContainer.visibility = View.GONE
+            menuContainer.visibility = View.VISIBLE
+            userInfoText.text = "✓ Logged in as: ${AdchainSdk.getCurrentUser()?.userId ?: "Unknown"}"
+        }
+        // Show login screen
+        else -> {
+            loginContainer.visibility = View.VISIBLE
+            menuContainer.visibility = View.GONE
+            userIdInput.setText("")
+        }
+    }
+}
+```
+
+### 4. SDK API 업데이트 반영
+
+#### openOfferwall API - placementId 추가
+```kotlin
+// Before
+AdchainSdk.openOfferwall(this)
+
+// After
+AdchainSdk.openOfferwall(
+    context = this,
+    placementId = "main_adchain_hub",  // NEW
+    callback = object : OfferwallCallback {
+        // ...
+    }
+)
+```
+
+#### Quiz/Mission 생성자 변경
+```kotlin
+// Before
+adchainQuiz = AdchainQuiz("quiz_unit_id")
+adchainMission = AdchainMission("mission_unit_id")
+
+// After
+adchainQuiz = AdchainQuiz()  // unit ID 제거
+adchainMission = AdchainMission()  // unit ID 제거
+```
+
+#### getQuizList 응답 구조 변경
+```kotlin
+// Before
+adchainQuiz?.getQuizList(
+    onSuccess = { events ->  // List<QuizEvent> 직접 반환
+        // ...
+    }
+)
+
+// After
+adchainQuiz?.getQuizList(
+    onSuccess = { quizResponse ->  // QuizResponse 래핑
+        val events = quizResponse.events  // List<QuizEvent> 추출
+        // ...
+    }
+)
+```
+
+#### Banner API - 링크 구조 변경
+```kotlin
+// Before
+val linkUrl = bannerResponse.linkUrl
+
+// After
+val linkUrl = bannerResponse.internalLinkUrl
+    ?: bannerResponse.externalLinkUrl
+    ?: "N/A"
+```
 
 ## 빌드 및 실행
 
 ### 요구사항
-- Android Studio Arctic Fox 이상
-- Kotlin 1.9.0
-- Android Gradle Plugin 8.1.1
-- Min SDK: 23 (Android 6.0)
-- Target SDK: 35
+- **Android Studio**: Arctic Fox (2020.3.1) 이상
+- **Kotlin**: 1.9.24
+- **Android Gradle Plugin**: 8.1.1
+- **JDK**: 8 이상
+- **Min SDK**: 24 (Android 7.0 Nougat)
+- **Target SDK**: 35 (Android 15)
+- **Compile SDK**: 35
 
 ### 빌드 명령
+
 ```bash
-# 클린 빌드
+# Clean 빌드
 ./gradlew clean build
 
-# 디버그 APK 생성
+# Debug APK 생성
 ./gradlew assembleDebug
+
+# Release APK 빌드
+./gradlew assembleRelease
+
+# APK 설치
+./gradlew installDebug
 
 # Lint 검사 건너뛰고 빌드
 ./gradlew assembleDebug -x lint
 
 # 테스트 실행
 ./gradlew test
+
+# 연결된 디바이스에서 테스트 실행
+./gradlew connectedAndroidTest
 ```
 
+### Android Studio에서 실행
+
+1. Android Studio 실행
+2. `File` → `Open` → 프로젝트 폴더 선택
+3. Gradle Sync 완료 대기
+4. Run 버튼 (▶️) 클릭 또는 `Shift+F10`
+
 ### 일반적인 빌드 오류 해결
-1. **SDK 경로 오류**: `settings.gradle.kts`에서 SDK 경로 확인
-2. **Lint 오류**: `android:tint` → `app:tint` 변경 필요
+
+#### 1. SDK 경로 오류
+```
+Could not resolve project :adchain-sdk
+```
+**해결**: `settings.gradle.kts`에서 SDK 경로 확인
+```kotlin
+project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
+```
+
+#### 2. Lint 오류
+```
+Execution failed for task ':app:lint'
+```
+**해결**: Lint 검사 건너뛰기
+```bash
+./gradlew assembleDebug -x lint
+```
+
+#### 3. Vector Drawable tint 오류
+```
+Error: app:tint not defined
+```
+**해결**: `android:tint` → `app:tint` 변경
+
+#### 4. Cleartext Traffic 오류
+```
+java.net.UnknownServiceException: CLEARTEXT communication not permitted
+```
+**해결**: `AndroidManifest.xml` 설정 확인
+```xml
+<application
+    android:usesCleartextTraffic="true"
+    android:networkSecurityConfig="@xml/network_security_config">
+```
 
 ## 배포 관련 (JitPack)
 
 ### JitPack을 통한 SDK 배포 프로세스
+
+이 샘플 앱은 로컬 모듈로 SDK를 참조하지만, 실제 프로덕션 앱에서는 JitPack을 통해 배포된 SDK를 사용할 수 있습니다.
 
 #### 1. 배포 준비
 ```bash
 # SDK 프로젝트로 이동
 cd ../adchain-sdk-android
 
-# 버전 태그 생성
+# 버전 태그 생성 (Semantic Versioning)
 git tag -a v1.0.0 -m "Release version 1.0.0"
 ```
 
 #### 2. GitHub 저장소 Public 전환
-**⚠️ 중요: JitPack 빌드를 위해 일시적으로 Public 필요**
+⚠️ **중요**: JitPack 빌드를 위해 일시적으로 Public 필요
 
 1. GitHub 저장소 Settings 접속
 2. "Danger Zone" → "Change repository visibility"
@@ -89,24 +337,31 @@ git push origin v1.0.0
 
 #### 4. 빌드 성공 확인 후 통합
 샘플 앱의 `build.gradle.kts`에 의존성 추가:
+
 ```kotlin
+// app/build.gradle.kts
+repositories {
+    maven { url = uri("https://jitpack.io") }
+}
+
 dependencies {
     // JitPack 의존성 (배포 후)
     implementation("com.github.[username]:adchain-sdk-android:v1.0.0")
-    
+
     // 또는 로컬 모듈 참조 (개발 중)
     // implementation(project(":adchain-sdk"))
 }
 ```
 
 #### 5. Private 저장소로 복구
-**✅ 배포 완료 후 즉시 Private으로 전환**
+✅ **배포 완료 후 즉시 Private으로 전환**
 
 1. GitHub Settings → "Change repository visibility"
 2. "Change to private" 선택
 3. 저장소 이름 입력하여 확인
 
 ### Private 저장소에서 JitPack 사용
+
 Private 저장소 배포 후 사용 시:
 
 1. JitPack 인증 토큰 생성 (https://jitpack.io/private)
@@ -131,43 +386,118 @@ repositories {
 ## 테스트 체크리스트
 
 ### SDK 통합 테스트
-- [ ] SDK 초기화 정상 동작
-- [ ] 사용자 로그인/로그아웃
-- [ ] 네트워크 통신 정상 동작
+- [x] SDK 수동 초기화 정상 동작
+- [x] SDK 중복 초기화 방지 확인
+- [x] 사용자 로그인/로그아웃
+- [x] Skip Login 테스트 모드 동작
+- [x] 네트워크 통신 정상 동작
+- [x] 로그 레벨 설정 (VERBOSE)
+
+### UI/UX 테스트
+- [x] Login Container ↔ Menu Container 전환
+- [x] Initialize SDK 버튼 상태 관리
+- [x] Skip Login 버튼 동작
+- [x] 3-State UI 전환 확인
+- [x] Toast 메시지 표시
 
 ### 기능별 테스트
-- [ ] 퀴즈 목록 로딩
-- [ ] 퀴즈 참여 및 완료
-- [ ] 미션 목록 표시
-- [ ] 미션 진행 상태 업데이트
-- [ ] 오퍼월 표시 및 상호작용
+- [x] Quiz 목록 로딩
+- [x] Quiz 참여 및 완료
+- [x] Quiz Empty State 처리
+- [x] Mission 목록 표시
+- [x] Mission 진행 상태 업데이트
+- [x] Offerwall 표시 및 상호작용
+- [x] Offerwall Callback 처리 (Open, Close, Error, Reward)
+- [x] Banner 데이터 조회 및 표시
+
+### API 업데이트 테스트
+- [x] openOfferwall placementId 파라미터 전달
+- [x] Quiz/Mission 생성자 unit ID 제거
+- [x] getQuizList QuizResponse 래핑 처리
+- [x] Banner 링크 구조 변경 (internalLinkUrl/externalLinkUrl)
 
 ### 빌드 및 배포
-- [ ] 로컬 빌드 성공
+- [x] 로컬 빌드 성공
 - [ ] Lint 검사 통과
-- [ ] APK 생성 및 설치
-- [ ] ProGuard/R8 규칙 적용
+- [x] APK 생성 및 설치
+- [ ] ProGuard/R8 규칙 적용 (Release 빌드)
+
+### 에러 처리 테스트
+- [x] SDK 미초기화 상태에서 로그인 시도 → Error handling
+- [x] Skip mode에서 각 기능 접근 → Graceful error
+- [x] 네트워크 오류 → Retry 기능
+- [x] Empty state → UI 피드백
 
 ## 주의사항
 
 ### 보안
-- API 키와 시크릿은 절대 코드에 하드코딩하지 않음
-- `.gitignore`에 `local.properties` 포함 확인
-- 민감한 정보는 환경 변수 사용
+
+1. **API 키 관리**
+   - ⚠️ 실제 앱에서는 API 키를 코드에 하드코딩하지 마세요
+   - `local.properties` 또는 환경 변수 사용 권장
+   - `.gitignore`에 `local.properties` 포함 확인
+   ```kotlin
+   // 권장 방법
+   val appId = BuildConfig.APP_ID
+   val appSecret = BuildConfig.APP_SECRET
+   ```
+
+2. **Network Security**
+   - 개발 환경: `usesCleartextTraffic="true"` 허용
+   - 프로덕션: `usesCleartextTraffic="false"` 설정 필수
+   - `network_security_config.xml` 재검토
+   - HTTPS 사용 권장
+
+3. **ProGuard/R8 규칙**
+   - Release 빌드 시 ProGuard 규칙 확인
+   - SDK 관련 클래스는 난독화에서 제외
+   ```proguard
+   -keep class com.adchain.sdk.** { *; }
+   -keepclassmembers class com.adchain.sdk.** { *; }
+   ```
 
 ### 코드 스타일
-- Kotlin 코딩 컨벤션 준수
-- 불필요한 주석 제거
-- 의미 있는 변수명 사용
+
+1. **Kotlin 코딩 컨벤션 준수**
+   - 함수명: camelCase
+   - 상수명: UPPER_SNAKE_CASE
+   - 클래스명: PascalCase
+
+2. **주석 및 문서화**
+   - 불필요한 주석 제거
+   - 복잡한 로직에만 설명 추가
+   - KDoc 사용 권장
+
+3. **변수명**
+   - 의미 있는 변수명 사용
+   - 약어 최소화
 
 ### Git 관리
-- 배포 전 반드시 Public 전환
-- 배포 후 즉시 Private 복구
-- 태그는 의미 있는 버전 번호 사용 (Semantic Versioning)
+
+1. **커밋 메시지**
+   - 명확하고 간결하게 작성
+   - Conventional Commits 형식 권장
+   ```
+   feat: Add skip login feature for testing
+   fix: Fix SDK initialization crash
+   docs: Update README.md with new features
+   ```
+
+2. **브랜치 전략**
+   - `main`: 안정 버전
+   - `develop`: 개발 브랜치
+   - `feature/*`: 기능 개발
+   - `hotfix/*`: 긴급 수정
+
+3. **배포 관리**
+   - 배포 전 반드시 Public 전환
+   - 배포 후 즉시 Private 복구
+   - 태그는 Semantic Versioning 사용
 
 ## 문제 해결
 
 ### 빌드 실패
+
 ```bash
 # Gradle 캐시 클리어
 ./gradlew clean
@@ -175,17 +505,127 @@ rm -rf ~/.gradle/caches/
 
 # 의존성 새로고침
 ./gradlew --refresh-dependencies
+
+# Android Studio 캐시 클리어
+# File → Invalidate Caches → Invalidate and Restart
 ```
 
 ### SDK 모듈을 찾을 수 없음
+
 `settings.gradle.kts` 파일 확인:
 ```kotlin
+include(":adchain-sdk")
 project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
 ```
 
-## 연락처
-- 기술 지원: [이메일 또는 이슈 트래커]
-- 문서: [문서 링크]
+상위 폴더에 `adchain-sdk-android` 프로젝트 존재 확인:
+```bash
+ls -la ../adchain-sdk-android/adchain-sdk
+```
+
+### SDK 초기화 실패
+
+1. **로그 확인**
+```bash
+adb logcat -s AdchainSdk:V AdchainSample:D
+```
+
+2. **초기화 순서 확인**
+   - "Initialize SDK" 버튼 먼저 클릭
+   - Toast: "SDK initialized successfully" 확인
+   - 로그인 진행
+
+3. **네트워크 연결 확인**
+   - WiFi/모바일 데이터 연결 확인
+   - VPN 연결 해제 후 재시도
+
+### Memory Leak 확인
+
+```bash
+# LeakCanary 추가 (build.gradle.kts)
+dependencies {
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.12")
+}
+```
+
+## 디버깅 팁
+
+### Logcat 필터링
+
+```bash
+# SDK 로그만 보기
+adb logcat -s AdchainSdk:V
+
+# 샘플 앱 로그만 보기
+adb logcat -s AdchainSample:D
+
+# 네트워크 로그 포함
+adb logcat -s AdchainSdk:V okhttp:D
+
+# 특정 프로세스만 보기
+adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
+```
+
+### Network Inspection
+
+```bash
+# Charles Proxy 또는 Proxyman 사용
+# Android 7.0+ 에서는 network_security_config.xml 설정 필요
+
+# res/xml/network_security_config.xml
+<network-security-config>
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user" />
+            <certificates src="system" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
+```
+
+### Performance Profiling
+
+1. Android Studio Profiler 사용
+   - `View` → `Tool Windows` → `Profiler`
+   - CPU, Memory, Network 모니터링
+
+2. Systrace 분석
+```bash
+# Systrace 캡처
+python $ANDROID_HOME/platform-tools/systrace/systrace.py \
+    --time=10 -o trace.html sched gfx view
+```
+
+## 연락처 및 지원
+
+- **기술 지원**: support@adchain.com
+- **GitHub Issues**: [Report Issues](https://github.com/1selfworld-labs/adchain-sdk-android-sample/issues)
+- **문서**: [Documentation](https://docs.adchain.com)
+- **Slack**: [AdChain Developers](https://adchain-dev.slack.com)
+
+## 변경 로그
+
+### v1.1.0 (2025-01-11)
+- ✨ SDK 수동 초기화 기능 추가
+- ✨ Skip Login 테스트 모드 추가
+- ✨ 3-State UI 관리 구현
+- 🔧 openOfferwall API placementId 파라미터 추가
+- 🔧 Quiz/Mission 생성자에서 unit ID 제거
+- 🔧 getQuizList 응답 구조 변경 (QuizResponse 래핑)
+- 🔧 Banner API 링크 구조 변경 (internalLinkUrl/externalLinkUrl)
+- 📝 README.md 및 CLAUDE.md 업데이트
+
+### v1.0.0 (Initial Release)
+- 🎉 Initial commit
+- ✨ SDK 초기화 및 로그인
+- ✨ Quiz, Mission, Offerwall, Banner 통합
+
+## 라이선스
+
+이 샘플 앱은 MIT 라이선스 하에 배포됩니다.
 
 ---
-*최종 업데이트: 2025-01-08*
+
+**최종 업데이트**: 2025-01-11
+**작성자**: AdChain Development Team
+**문서 버전**: 1.1.0
