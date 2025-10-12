@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Read(//Users/donghoon/Desktop/GIT/fly33499/ad-chain-sdk/adchain-sdk-android/**)"
+      "Read(//Users/donghoon/Desktop/GIT/fly33499/ad-chain-sdk/adchain-sdk-android/**)",
+      "Read(//Users/donghoon/Desktop/GIT/fly33499/ad-chain-sdk/**)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "Bash(adb logcat:*)"
     ],
     "deny": [],
     "ask": []
