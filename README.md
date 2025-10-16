@@ -21,6 +21,7 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 - Mission 시스템 통합
 - Offerwall 통합
 - Banner 광고 통합
+- Adjoe Offerwall 통합
 - App Launch Test (앱 설치 여부 확인)
 
 ### 기술 스택
@@ -69,7 +70,13 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 - 내부/외부 링크 처리
 - 이미지 표시
 
-### 7. App Launch Test
+### 7. Adjoe Offerwall
+- Adjoe 플랫폼 기반 오퍼월
+- Placement ID 기반 관리
+- 콜백 처리 (Open, Close, Error, Reward)
+- 사용자 프로필 연동 (Gender/Age)
+
+### 8. App Launch Test
 - WebView에서 앱 설치 여부 확인 테스트
 - 클립보드를 통한 테스트 코드 자동 복사
 - JavaScript Bridge 테스트 지원
@@ -282,12 +289,68 @@ private fun performLogin() {
 }
 ```
 
-### adjoe 통합 시 Gender/Age 전달
+### 7. Adjoe 통합
 
-adjoe SDK는 사용자의 성별과 나이 정보를 활용하여 더 타겟팅된 광고를 제공합니다.
-AdChain SDK는 로그인 시 제공된 사용자 정보를 자동으로 adjoe SDK에 전달합니다.
+Adjoe는 AdChain SDK와 통합된 써드파티 광고 플랫폼으로, 다양한 광고 형태와 보상 시스템을 제공합니다.
 
-#### 사용자 프로필 정보 설정
+#### Adjoe Offerwall 열기
+
+MainActivity.kt에서 실제 구현된 코드:
+
+```kotlin
+// MainActivity.kt
+adjoeButton.setOnClickListener {
+    AdchainSdk.openAdjoeOfferwall(
+        context = this,
+        placementId = "main_adjoe_test",
+        callback = object : OfferwallCallback {
+            override fun onOpened() {
+                Log.d(TAG, "Adjoe Offerwall opened successfully")
+            }
+
+            override fun onClosed() {
+                Log.d(TAG, "Adjoe Offerwall closed by user")
+            }
+
+            override fun onError(message: String) {
+                Log.e(TAG, "Adjoe Offerwall error: $message")
+                Toast.makeText(this@MainActivity, "Adjoe Error: $message", Toast.LENGTH_LONG).show()
+            }
+
+            override fun onRewardEarned(amount: Int) {
+                Log.d(TAG, "Adjoe reward earned: $amount")
+                Toast.makeText(this@MainActivity, "Adjoe reward: $amount points!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+}
+```
+
+#### API 파라미터
+
+| 파라미터 | 타입 | 설명 | 필수 |
+|---------|------|------|------|
+| `context` | `Context` | Activity 컨텍스트 | ✅ |
+| `placementId` | `String` | Adjoe Placement ID | ✅ |
+| `callback` | `OfferwallCallback` | 이벤트 콜백 | ✅ |
+
+#### OfferwallCallback 인터페이스
+
+```kotlin
+interface OfferwallCallback {
+    fun onOpened()                    // Offerwall이 성공적으로 열렸을 때
+    fun onClosed()                    // 사용자가 Offerwall을 닫았을 때
+    fun onError(message: String)      // 오류 발생 시
+    fun onRewardEarned(amount: Int)   // 보상 획득 시
+}
+```
+
+#### Gender/Age 정보 전달 (선택사항)
+
+Adjoe SDK는 사용자의 성별과 나이 정보를 활용하여 더 타겟팅된 광고를 제공합니다.
+AdChain SDK는 로그인 시 제공된 사용자 정보를 자동으로 Adjoe SDK에 전달합니다.
+
+**사용자 프로필 정보 설정:**
 
 ```kotlin
 val user = AdchainSdkUser.Builder(userId)
@@ -298,20 +361,20 @@ val user = AdchainSdkUser.Builder(userId)
 AdchainSdk.login(user, loginListener)
 ```
 
-#### 지원되는 값
+**지원되는 값:**
 
 | 속성 | 타입 | 설명 | 필수 여부 |
 |------|------|------|-----------|
 | `gender` | `AdchainSdkUser.Gender` | `MALE` 또는 `FEMALE` | 선택 |
 | `birthYear` | `Int` | 출생년도 (예: 1990) | 선택 |
 
-#### 중요 사항
+**중요 사항:**
 
 1. **Optional 필드**: gender와 birthYear는 선택사항입니다
-   - 정보가 없으면 null로 전달 → adjoe는 정보 없이 동작
-   - 정보가 있으면 자동으로 adjoe SDK에 전달됩니다
+   - 정보가 없으면 null로 전달 → Adjoe는 정보 없이 동작
+   - 정보가 있으면 자동으로 Adjoe SDK에 전달됩니다
 
-2. **재초기화 불가**: adjoe SDK는 재초기화를 지원하지 않습니다
+2. **재초기화 불가**: Adjoe SDK는 재초기화를 지원하지 않습니다
    - **로그인 시점에 모든 정보를 제공**해야 합니다
    - 나중에 정보를 얻은 경우: 로그아웃 후 재로그인 필요
 
@@ -320,39 +383,27 @@ AdchainSdk.login(user, loginListener)
    - Gender → `PlaytimeGender.MALE/FEMALE`
    - BirthYear → Java `Date` 객체 (매년 1월 1일 기준)
 
-#### 예시 코드
+**예시 코드:**
 
-**정보가 있는 경우:**
 ```kotlin
-// 사용자 정보를 모두 알고 있는 경우
+// 정보가 있는 경우
 val user = AdchainSdkUser.Builder("user_123")
     .setGender(AdchainSdkUser.Gender.MALE)
     .setBirthYear(1990)
     .build()
-
 AdchainSdk.login(user, loginListener)
-```
 
-**정보가 없는 경우:**
-```kotlin
-// 사용자 정보를 모르는 경우 (adjoe는 정보 없이 동작)
+// 정보가 없는 경우 (Adjoe는 정보 없이 동작)
 val user = AdchainSdkUser.Builder("user_123")
     .build()
-
 AdchainSdk.login(user, loginListener)
-```
 
-**나중에 정보를 얻은 경우:**
-```kotlin
-// 1. 로그아웃
+// 나중에 정보를 얻은 경우: 로그아웃 후 재로그인
 AdchainSdk.logout()
-
-// 2. 새로운 정보로 재로그인
 val updatedUser = AdchainSdkUser.Builder("user_123")
     .setGender(AdchainSdkUser.Gender.FEMALE)
     .setBirthYear(1995)
     .build()
-
 AdchainSdk.login(updatedUser, loginListener)
 ```
 
@@ -493,7 +544,7 @@ private fun performBannerTest() {
 }
 ```
 
-### 7. App Launch Test (앱 설치 여부 확인)
+### 8. App Launch Test (앱 설치 여부 확인)
 
 WebView 내에서 특정 앱의 설치 여부를 확인하는 JavaScript Bridge 기능을 테스트할 수 있습니다.
 
@@ -621,7 +672,7 @@ Chrome DevTools를 통해 WebView를 디버깅하려면:
 - SDK 초기화 제어
 - 사용자 로그인/로그아웃
 - Skip Login (테스트 모드)
-- 기능별 화면 이동 (Quiz, Mission, Offerwall, Banner)
+- 기능별 화면 이동 (Quiz, Mission, Offerwall, Banner, Adjoe, App Launch Test)
 
 **UI 상태:**
 1. **Login Screen**: SDK 초기화 및 로그인 화면
@@ -763,7 +814,26 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 2. Banner 데이터 로딩 확인
 3. Banner 정보 Dialog 표시 확인
 
-### 8. App Launch Test
+### 8. Adjoe Offerwall 테스트
+
+**정상 플로우:**
+1. 메뉴에서 "Adjoe Offerwall Test" 클릭
+2. Adjoe Offerwall 화면 열림 확인
+3. 광고 참여 및 보상 획득
+4. Offerwall 닫기
+
+**콜백 확인:**
+- onOpened: Logcat에서 "Adjoe Offerwall opened successfully" 확인
+- onClosed: 닫기 시 "Adjoe Offerwall closed by user" 확인
+- onRewardEarned: 보상 획득 시 Toast 메시지 "Adjoe reward: X points!" 확인
+- onError: 오류 발생 시 Toast 메시지 "Adjoe Error: ..." 확인
+
+**테스트 포인트:**
+- SDK 미초기화 상태에서 접근 시 graceful error handling
+- 로그인 시 제공한 Gender/Age 정보가 Adjoe에 전달되는지 확인
+- Adjoe 광고 목록 및 리워드 시스템 정상 동작 확인
+
+### 9. App Launch Test
 
 **정상 플로우:**
 1. Package Name 입력 (예: `com.instagram.android`)
