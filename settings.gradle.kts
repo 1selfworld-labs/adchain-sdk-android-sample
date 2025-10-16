@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // JitPack repository for AdChain SDK
+        maven { url = uri("https://jitpack.io") }
         // Adjoe SDK Maven repository
         maven { url = uri("https://releases.adjoe.io/maven") }
     }
@@ -17,5 +19,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "AdchainSample"
 include(":app")
-include(":adchain-sdk")
-project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
+
+// local sdk 참조 할 경우
+//include(":adchain-sdk")
+//project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")

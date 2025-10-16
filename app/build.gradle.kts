@@ -61,7 +61,8 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     
     // Adchain SDK - Using local module (adjoe SDK included automatically)
-    implementation(project(":adchain-sdk"))
+    // implementation(project(":adchain-sdk"))
+    implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.23")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

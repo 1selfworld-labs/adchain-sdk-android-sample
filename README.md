@@ -21,13 +21,15 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 - Mission 시스템 통합
 - Offerwall 통합
 - Banner 광고 통합
+- App Launch Test (앱 설치 여부 확인)
 
 ### 기술 스택
 
 - **언어**: Kotlin 1.9.24
 - **최소 SDK**: 24 (Android 7.0 Nougat)
 - **타겟 SDK**: 35 (Android 15)
-- **빌드 도구**: Gradle 8.1.1
+- **빌드 도구**: Gradle 8.5
+- **SDK 배포**: JitPack (v1.0.23)
 - **아키텍처**: Activity 기반, Material Design 3
 
 ## ✨ 주요 기능
@@ -66,6 +68,11 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 - Banner 데이터 조회
 - 내부/외부 링크 처리
 - 이미지 표시
+
+### 7. App Launch Test
+- WebView에서 앱 설치 여부 확인 테스트
+- 클립보드를 통한 테스트 코드 자동 복사
+- JavaScript Bridge 테스트 지원
 
 ## 📁 프로젝트 구조
 
@@ -118,15 +125,36 @@ adchain-sdk-android-sample/
    cd adchain-sdk-android-sample
    ```
 
-2. **SDK 모듈 연결 확인**
+2. **SDK 의존성 설정**
 
-   이 샘플 앱은 상위 폴더의 `adchain-sdk-android` 프로젝트를 로컬 모듈로 참조합니다.
+   이 샘플 앱은 JitPack을 통해 배포된 AdChain SDK를 사용합니다.
 
-   `settings.gradle.kts` 파일 확인:
+   #### JitPack 배포 버전 사용 (권장)
+
+   `app/build.gradle.kts` 파일에서 SDK 버전 확인:
    ```kotlin
-   include(":adchain-sdk")
-   project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
+   dependencies {
+       implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.23")
+   }
    ```
+
+   #### 로컬 모듈 참조 (SDK 개발 시)
+
+   SDK를 직접 수정하고 테스트하려면 로컬 모듈로 참조할 수 있습니다:
+
+   1. `settings.gradle.kts` 파일 수정:
+      ```kotlin
+      include(":adchain-sdk")
+      project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
+      ```
+
+   2. `app/build.gradle.kts` 파일 수정:
+      ```kotlin
+      dependencies {
+          // implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.23")
+          implementation(project(":adchain-sdk"))
+      }
+      ```
 
 3. **앱 키 설정**
 
@@ -252,6 +280,80 @@ private fun performLogin() {
         }
     })
 }
+```
+
+### adjoe 통합 시 Gender/Age 전달
+
+adjoe SDK는 사용자의 성별과 나이 정보를 활용하여 더 타겟팅된 광고를 제공합니다.
+AdChain SDK는 로그인 시 제공된 사용자 정보를 자동으로 adjoe SDK에 전달합니다.
+
+#### 사용자 프로필 정보 설정
+
+```kotlin
+val user = AdchainSdkUser.Builder(userId)
+    .setGender(AdchainSdkUser.Gender.MALE)   // 성별 설정 (선택사항)
+    .setBirthYear(1990)                       // 출생년도 설정 (선택사항)
+    .build()
+
+AdchainSdk.login(user, loginListener)
+```
+
+#### 지원되는 값
+
+| 속성 | 타입 | 설명 | 필수 여부 |
+|------|------|------|-----------|
+| `gender` | `AdchainSdkUser.Gender` | `MALE` 또는 `FEMALE` | 선택 |
+| `birthYear` | `Int` | 출생년도 (예: 1990) | 선택 |
+
+#### 중요 사항
+
+1. **Optional 필드**: gender와 birthYear는 선택사항입니다
+   - 정보가 없으면 null로 전달 → adjoe는 정보 없이 동작
+   - 정보가 있으면 자동으로 adjoe SDK에 전달됩니다
+
+2. **재초기화 불가**: adjoe SDK는 재초기화를 지원하지 않습니다
+   - **로그인 시점에 모든 정보를 제공**해야 합니다
+   - 나중에 정보를 얻은 경우: 로그아웃 후 재로그인 필요
+
+3. **자동 전달**: AdChain SDK가 자동으로 처리합니다
+   - Android: `PlaytimeUserProfile` 객체로 변환하여 전달
+   - Gender → `PlaytimeGender.MALE/FEMALE`
+   - BirthYear → Java `Date` 객체 (매년 1월 1일 기준)
+
+#### 예시 코드
+
+**정보가 있는 경우:**
+```kotlin
+// 사용자 정보를 모두 알고 있는 경우
+val user = AdchainSdkUser.Builder("user_123")
+    .setGender(AdchainSdkUser.Gender.MALE)
+    .setBirthYear(1990)
+    .build()
+
+AdchainSdk.login(user, loginListener)
+```
+
+**정보가 없는 경우:**
+```kotlin
+// 사용자 정보를 모르는 경우 (adjoe는 정보 없이 동작)
+val user = AdchainSdkUser.Builder("user_123")
+    .build()
+
+AdchainSdk.login(user, loginListener)
+```
+
+**나중에 정보를 얻은 경우:**
+```kotlin
+// 1. 로그아웃
+AdchainSdk.logout()
+
+// 2. 새로운 정보로 재로그인
+val updatedUser = AdchainSdkUser.Builder("user_123")
+    .setGender(AdchainSdkUser.Gender.FEMALE)
+    .setBirthYear(1995)
+    .build()
+
+AdchainSdk.login(updatedUser, loginListener)
 ```
 
 ### 3. Quiz 통합
@@ -390,6 +492,126 @@ private fun performBannerTest() {
     )
 }
 ```
+
+### 7. App Launch Test (앱 설치 여부 확인)
+
+WebView 내에서 특정 앱의 설치 여부를 확인하는 JavaScript Bridge 기능을 테스트할 수 있습니다.
+
+```kotlin
+// MainActivity.kt
+private fun performAddTestButton() {
+    val packageName = appLaunchInput.text?.toString()?.trim()
+
+    if (packageName.isNullOrEmpty()) {
+        appLaunchInputLayout.error = "패키지명을 입력하세요 (예: com.instagram.android)"
+        return
+    }
+
+    appLaunchInputLayout.error = null
+    Log.d(TAG, "Preparing app launch test for package: $packageName")
+
+    // 테스트 코드를 클립보드에 복사
+    val testCode = """
+window.AdchainBridge.checkAppInstalled('$packageName');
+window.onAppInstalledResult = function(result) {
+    alert('설치: ' + result.installed + '\n패키지: ' + result.identifier);
+};
+    """.trimIndent()
+
+    try {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("Test Code", testCode)
+        clipboard.setPrimaryClip(clip)
+
+        // 안내 다이얼로그 표시 및 Offerwall 열기
+        AlertDialog.Builder(this)
+            .setTitle("앱 실행 테스트 방법")
+            .setMessage("""
+                테스트 코드가 클립보드에 복사되었습니다!
+
+                테스트 방법:
+                1. "Adchain Hub Test" 버튼을 눌러 Offerwall를 엽니다
+                2. Chrome DevTools 또는 WebView 디버깅으로 콘솔을 엽니다
+                3. 복사된 코드를 콘솔에 붙여넣고 실행합니다
+
+                테스트 패키지: $packageName
+
+                또는 아래 버튼을 눌러 Offerwall를 바로 열 수 있습니다.
+            """.trimIndent())
+            .setPositiveButton("Offerwall 열기") { _, _ ->
+                AdchainSdk.openOfferwall(
+                    context = this,
+                    placementId = "app_launch_test",
+                    callback = object : OfferwallCallback {
+                        override fun onOpened() {
+                            Log.d(TAG, "Offerwall opened for app launch test")
+                            Toast.makeText(this@MainActivity, "콘솔에서 테스트 코드를 실행하세요", Toast.LENGTH_LONG).show()
+                        }
+
+                        override fun onClosed() {
+                            Log.d(TAG, "Offerwall closed")
+                        }
+
+                        override fun onError(message: String) {
+                            Log.e(TAG, "Offerwall error: $message")
+                            Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                        }
+
+                        override fun onRewardEarned(amount: Int) {
+                            // No-op
+                        }
+                    }
+                )
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to copy test code", e)
+        Toast.makeText(this, "테스트 코드 복사 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+```
+
+#### JavaScript Bridge API
+
+WebView에서 사용 가능한 API:
+
+```javascript
+// 앱 설치 여부 확인
+window.AdchainBridge.checkAppInstalled('com.instagram.android');
+
+// 결과 콜백 등록
+window.onAppInstalledResult = function(result) {
+    console.log('Installed:', result.installed);
+    console.log('Identifier:', result.identifier);
+};
+```
+
+#### 테스트 예시
+
+1. **Instagram 설치 여부 확인**
+   ```javascript
+   window.AdchainBridge.checkAppInstalled('com.instagram.android');
+   ```
+
+2. **YouTube 설치 여부 확인**
+   ```javascript
+   window.AdchainBridge.checkAppInstalled('com.google.android.youtube');
+   ```
+
+3. **커스텀 앱 확인**
+   ```javascript
+   window.AdchainBridge.checkAppInstalled('com.yourcompany.yourapp');
+   ```
+
+#### WebView 디버깅 설정
+
+Chrome DevTools를 통해 WebView를 디버깅하려면:
+
+1. Chrome 브라우저에서 `chrome://inspect` 접속
+2. "Devices" 탭에서 연결된 기기 확인
+3. WebView 인스턴스 선택 후 "inspect" 클릭
+4. Console 탭에서 테스트 코드 실행
 
 ## 📱 화면별 기능
 
@@ -541,6 +763,24 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 2. Banner 데이터 로딩 확인
 3. Banner 정보 Dialog 표시 확인
 
+### 8. App Launch Test
+
+**정상 플로우:**
+1. Package Name 입력 (예: `com.instagram.android`)
+2. "Add Test Button to Offerwall" 버튼 클릭
+3. 테스트 코드가 클립보드에 복사됨
+4. 안내 Dialog에서 "Offerwall 열기" 클릭
+5. Offerwall 열림
+6. Chrome DevTools (`chrome://inspect`)에서 WebView 디버깅 시작
+7. Console에 클립보드의 코드 붙여넣기 및 실행
+8. Alert으로 설치 여부 확인
+
+**테스트 예시:**
+- Instagram: `com.instagram.android`
+- YouTube: `com.google.android.youtube`
+- Facebook: `com.facebook.katana`
+- WhatsApp: `com.whatsapp`
+
 ## 🔧 문제 해결
 
 ### 일반적인 문제
@@ -679,4 +919,4 @@ adb logcat -s AdchainSdk:V okhttp:D
 
 ---
 
-**최종 업데이트**: 2025-01-11
+**최종 업데이트**: 2025-01-16

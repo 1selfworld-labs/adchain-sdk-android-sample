@@ -1,5 +1,6 @@
 package com.adchain.sample
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -44,6 +45,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adchainHubButton: MaterialButton
     private lateinit var bannerButton: MaterialButton
     private lateinit var adjoeButton: MaterialButton
+
+    // App Launch Test
+    private lateinit var appLaunchInput: TextInputEditText
+    private lateinit var appLaunchInputLayout: TextInputLayout
+    private lateinit var addTestButton: MaterialButton
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,12 +70,17 @@ class MainActivity : AppCompatActivity() {
         skipLoginButton = findViewById(R.id.skipLoginButton)
         logoutButton = findViewById(R.id.logoutButton)
         userInfoText = findViewById(R.id.userInfoText)
-        
+
         quizButton = findViewById(R.id.quizButton)
         missionButton = findViewById(R.id.missionButton)
         adchainHubButton = findViewById(R.id.adchainHubButton)
         bannerButton = findViewById(R.id.bannerButton)
         adjoeButton = findViewById(R.id.adjoeButton)
+
+        // App Launch Test
+        appLaunchInput = findViewById(R.id.appLaunchInput)
+        appLaunchInputLayout = findViewById(R.id.appLaunchInputLayout)
+        addTestButton = findViewById(R.id.addTestButton)
     }
     
     private fun setupListeners() {
@@ -130,6 +141,10 @@ class MainActivity : AppCompatActivity() {
 
         adjoeButton.setOnClickListener {
             performAdjoeTest()
+        }
+
+        addTestButton.setOnClickListener {
+            performAddTestButton()
         }
     }
 
@@ -314,6 +329,77 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    private fun performAddTestButton() {
+        val packageName = appLaunchInput.text?.toString()?.trim()
+
+        if (packageName.isNullOrEmpty()) {
+            appLaunchInputLayout.error = "패키지명을 입력하세요 (예: com.instagram.android)"
+            return
+        }
+
+        appLaunchInputLayout.error = null
+        Log.d(TAG, "Preparing app launch test for package: $packageName")
+
+        // 테스트 코드를 클립보드에 복사
+        val testCode = """
+window.AdchainBridge.checkAppInstalled('$packageName');
+window.onAppInstalledResult = function(result) { alert('설치: ' + result.installed + '\n패키지: ' + result.identifier); };
+        """.trimIndent()
+
+        try {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("Test Code", testCode)
+            clipboard.setPrimaryClip(clip)
+
+            // 안내 다이얼로그 표시
+            AlertDialog.Builder(this)
+                .setTitle("앱 실행 테스트 방법")
+                .setMessage("""
+                    테스트 코드가 클립보드에 복사되었습니다!
+
+                    테스트 방법:
+                    1. "Adchain Hub Test" 버튼을 눌러 Offerwall를 엽니다
+                    2. Chrome DevTools 또는 WebView 디버깅으로 콘솔을 엽니다
+                    3. 복사된 코드를 콘솔에 붙여넣고 실행합니다
+
+                    테스트 패키지: $packageName
+
+                    또는 아래 버튼을 눌러 Offerwall를 바로 열 수 있습니다.
+                """.trimIndent())
+                .setPositiveButton("Offerwall 열기") { _, _ ->
+                    // Offerwall 열기
+                    AdchainSdk.openOfferwall(
+                        context = this,
+                        placementId = "app_launch_test",
+                        callback = object : com.adchain.sdk.offerwall.OfferwallCallback {
+                            override fun onOpened() {
+                                Log.d(TAG, "Offerwall opened for app launch test")
+                                Toast.makeText(this@MainActivity, "콘솔에서 테스트 코드를 실행하세요", Toast.LENGTH_LONG).show()
+                            }
+
+                            override fun onClosed() {
+                                Log.d(TAG, "Offerwall closed")
+                            }
+
+                            override fun onError(message: String) {
+                                Log.e(TAG, "Offerwall error: $message")
+                                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                            }
+
+                            override fun onRewardEarned(amount: Int) {
+                                // No-op
+                            }
+                        }
+                    )
+                }
+                .setNegativeButton("취소", null)
+                .show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to copy test code", e)
+            Toast.makeText(this, "테스트 코드 복사 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         updateUI()
