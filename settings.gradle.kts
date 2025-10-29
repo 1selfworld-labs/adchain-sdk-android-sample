@@ -20,6 +20,6 @@ dependencyResolutionManagement {
 rootProject.name = "AdchainSample"
 include(":app")
 
-// local sdk 참조 할 경우
-//include(":adchain-sdk")
-//project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
+// local sdk 참조 할 경우 (현재는 원격 JitPack v1.0.29 사용)
+// include(":adchain-sdk")
+// project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")

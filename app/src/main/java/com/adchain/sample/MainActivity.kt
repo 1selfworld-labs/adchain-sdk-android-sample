@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adchainHubButton: MaterialButton
     private lateinit var bannerButton: MaterialButton
     private lateinit var adjoeButton: MaterialButton
+    private lateinit var nestAdsButton: MaterialButton
 
     // App Launch Test
     private lateinit var appLaunchInput: TextInputEditText
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         adchainHubButton = findViewById(R.id.adchainHubButton)
         bannerButton = findViewById(R.id.bannerButton)
         adjoeButton = findViewById(R.id.adjoeButton)
+        nestAdsButton = findViewById(R.id.nestAdsButton)
 
         // App Launch Test
         appLaunchInput = findViewById(R.id.appLaunchInput)
@@ -143,6 +145,10 @@ class MainActivity : AppCompatActivity() {
             performAdjoeTest()
         }
 
+        nestAdsButton.setOnClickListener {
+            performNestAdsTest()
+        }
+
         addTestButton.setOnClickListener {
             performAddTestButton()
         }
@@ -175,6 +181,39 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Adjoe reward earned: $amount")
                     runOnUiThread {
                         Toast.makeText(this@MainActivity, "Adjoe reward: $amount points!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        )
+    }
+
+    private fun performNestAdsTest() {
+        Log.d(TAG, "Starting NestAds Offerwall Test")
+
+        // SDK의 openOfferwallNestAds API 호출
+        AdchainSdk.openOfferwallNestAds(
+            context = this,
+            placementId = "test_nest_ads_placement",
+            callback = object : com.adchain.sdk.offerwall.OfferwallCallback {
+                override fun onOpened() {
+                    Log.d(TAG, "NestAds Offerwall opened successfully")
+                }
+
+                override fun onClosed() {
+                    Log.d(TAG, "NestAds Offerwall closed by user")
+                }
+
+                override fun onError(message: String) {
+                    Log.e(TAG, "NestAds Offerwall error: $message")
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "NestAds Error: $message", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                override fun onRewardEarned(amount: Int) {
+                    Log.d(TAG, "NestAds reward earned: $amount")
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "NestAds reward: $amount points!", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

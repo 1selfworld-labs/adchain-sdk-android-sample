@@ -163,6 +163,16 @@
             app:icon="@android:drawable/ic_menu_compass"
             app:iconGravity="start" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/nestAdsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="NestAds Offerwall Test"
+            android:backgroundTint="@android:color/holo_green_dark"
+            app:icon="@android:drawable/ic_menu_compass"
+            app:iconGravity="start" />
+
         <!-- App Launch Test Section -->
         <TextView
             android:layout_width="wrap_content"
