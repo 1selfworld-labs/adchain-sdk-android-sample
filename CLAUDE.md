@@ -4,7 +4,7 @@
 
 AdChain SDK Android 샘플 애플리케이션으로, SDK의 주요 기능들을 테스트하고 통합 방법을 보여주는 예제 프로젝트입니다.
 
-이 프로젝트는 **SDK 초기화 제어**, **사용자 인증**, **Quiz/Mission/Offerwall/Banner 통합**을 시연하며, 특히 **SDK 미초기화 상태에서의 graceful error handling**을 테스트할 수 있도록 설계되었습니다.
+이 프로젝트는 **탭 기반 UI**, **SDK 초기화 제어**, **사용자 인증**, **Quiz/Mission/Offerwall/Banner 통합**, **AdchainOfferwallView 통합**을 시연하며, 특히 **SDK 미초기화 상태에서의 graceful error handling**과 **WebView 기반 오퍼월 화면**을 테스트할 수 있도록 설계되었습니다.
 
 ## 프로젝트 구조
 
@@ -12,7 +12,10 @@ AdChain SDK Android 샘플 애플리케이션으로, SDK의 주요 기능들을 
 adchain-sdk-android-sample/
 ├── app/                                    # 샘플 앱 모듈
 │   ├── src/main/java/com/adchain/sample/
-│   │   ├── MainActivity.kt                 # 메인 화면 (SDK 초기화, 로그인, 메뉴)
+│   │   ├── LoginActivity.kt                # 로그인 화면 (SDK 초기화, 인증)
+│   │   ├── MainActivity.kt                 # 탭 컨테이너 (홈/혜택)
+│   │   ├── HomeFragment.kt                 # 홈 탭 (SDK 테스트 메뉴)
+│   │   ├── BenefitsFragment.kt             # 혜택 탭 (AdchainOfferwallView)
 │   │   ├── SampleApplication.kt            # Application 클래스 (SDK 초기화 로직)
 │   │   ├── quiz/
 │   │   │   ├── QuizActivity.kt            # Quiz 목록 및 참여
@@ -23,14 +26,24 @@ adchain-sdk-android-sample/
 │   │       ├── MissionAdapter.kt          # RecyclerView 어댑터
 │   │       └── MissionViewHolder.kt       # ViewHolder
 │   ├── src/main/res/
-│   │   ├── layout/                        # XML 레이아웃 파일
-│   │   │   ├── activity_main.xml         # 메인 화면 레이아웃
-│   │   │   ├── activity_quiz.xml         # Quiz 화면 레이아웃
-│   │   │   ├── activity_mission.xml      # Mission 화면 레이아웃
-│   │   │   ├── item_quiz.xml             # Quiz 아이템 레이아웃
-│   │   │   ├── item_mission.xml          # Mission 아이템 레이아웃
+│   │   ├── layout/
+│   │   │   ├── activity_login.xml         # 로그인 화면
+│   │   │   ├── activity_main_tabs.xml     # 탭 컨테이너
+│   │   │   ├── fragment_home.xml          # 홈 탭
+│   │   │   ├── fragment_benefits.xml      # 혜택 탭
+│   │   │   ├── activity_quiz.xml          # Quiz 화면
+│   │   │   ├── activity_mission.xml       # Mission 화면
+│   │   │   ├── item_quiz.xml              # Quiz 아이템
+│   │   │   ├── item_mission.xml           # Mission 아이템
 │   │   │   └── item_offerwall_promotion.xml
-│   │   ├── drawable/                      # 아이콘 및 drawable 리소스
+│   │   ├── menu/
+│   │   │   └── bottom_navigation_menu.xml # 하단 탭 메뉴
+│   │   ├── drawable/
+│   │   │   ├── ic_home.xml                # 홈 아이콘
+│   │   │   ├── ic_benefits.xml            # 혜택 아이콘
+│   │   │   └── ...                        # 기타 아이콘
+│   │   ├── color/
+│   │   │   └── bottom_nav_color.xml       # 탭 색상 selector
 │   │   ├── values/                        # 색상, 문자열, 테마
 │   │   │   ├── colors.xml
 │   │   │   ├── strings.xml
@@ -44,7 +57,8 @@ adchain-sdk-android-sample/
 ├── settings.gradle.kts                    # 프로젝트 설정 (SDK 모듈 연결)
 ├── gradle.properties                      # Gradle 프로퍼티
 ├── README.md                              # 사용자 문서
-└── CLAUDE.md                              # 개발자 가이드 (이 문서)
+├── CLAUDE.md                              # 개발자 가이드 (이 문서)
+└── BENEFITS_TAB_IMPLEMENTATION.md         # 혜택 탭 구현 가이드
 ```
 
 ## SDK 모듈 연결
@@ -70,7 +84,64 @@ project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
 
 ## 주요 기능 및 변경사항
 
-### 1. SDK 초기화 제어 (NEW)
+### 0. 탭 기반 UI 아키텍처 (NEW v1.2.0)
+
+**변경 이유**: Expo Sample과 동일한 탭 구조 구현, AdchainOfferwallView 통합
+
+#### 아키텍처 변경
+
+**Before (Single Activity)**:
+```
+MainActivity (Login + Menu + SDK Tests)
+  - 로그인 화면
+  - 메뉴 화면
+  - 모든 기능이 하나의 Activity
+```
+
+**After (Multi Activity + Fragment)**:
+```
+LoginActivity (Login Screen)
+  - SDK 초기화
+  - 사용자 로그인
+  - Skip Login 기능
+    ↓
+MainActivity (Tab Container)
+  ├── HomeFragment (기존 메뉴 기능)
+  │   - Quiz Test
+  │   - Mission Test
+  │   - Offerwall Test (팝업)
+  │   - Banner Test
+  │   - Adjoe Offerwall Test
+  │   - App Launch Test
+  │   - Logout
+  └── BenefitsFragment (AdchainOfferwallView)
+      - WebView 기반 오퍼월
+      - 백버튼 처리
+      - 이벤트 콜백
+```
+
+#### 주요 변경 파일
+
+**추가된 파일:**
+- `LoginActivity.kt` - 로그인 전용 화면
+- `MainActivity.kt` (새 버전) - 탭 컨테이너
+- `HomeFragment.kt` - 홈 탭 (기존 MainActivity 기능)
+- `BenefitsFragment.kt` - 혜택 탭 (AdchainOfferwallView)
+- `activity_login.xml` - 로그인 레이아웃
+- `activity_main_tabs.xml` - 탭 컨테이너 레이아웃
+- `fragment_home.xml` - 홈 탭 레이아웃
+- `fragment_benefits.xml` - 혜택 탭 레이아웃
+- `menu/bottom_navigation_menu.xml` - 하단 탭 메뉴
+- `drawable/ic_home.xml`, `ic_benefits.xml` - 탭 아이콘
+- `color/bottom_nav_color.xml` - 탭 색상 selector
+
+**삭제된 파일:**
+- `activity_main.xml` (기존 MainActivity 레이아웃)
+
+**SDK 버전 업그레이드:**
+- v1.0.29 → v1.0.32 (AdchainOfferwallView 및 OfferwallEventCallback 지원)
+
+### 1. SDK 초기화 제어 (v1.1.0)
 
 **변경 이유**: SDK 미초기화 상태에서 graceful error handling 테스트를 위해
 
@@ -605,6 +676,20 @@ python $ANDROID_HOME/platform-tools/systrace/systrace.py \
 
 ## 변경 로그
 
+### v1.2.0 (2025-01-30)
+- 🎨 **아키텍처 변경**: Single Activity → Multi Activity + Fragment 구조
+- ✨ **LoginActivity 추가**: 로그인 전용 화면 분리
+- ✨ **탭 기반 UI 구현**: BottomNavigationView (홈/혜택 탭)
+- ✨ **HomeFragment 추가**: 기존 MainActivity 기능 이관
+- ✨ **BenefitsFragment 추가**: AdchainOfferwallView 통합
+- 🆙 **SDK 버전 업그레이드**: v1.0.29 → v1.0.32
+- ✨ **AdchainOfferwallView 통합**: WebView 기반 오퍼월 화면
+- ✨ **백버튼 처리**: handleBackPress()로 WebView 네비게이션 관리
+- ✨ **이벤트 콜백**: OfferwallEventCallback (onCustomEvent, onDataRequest)
+- 🎨 **UI/UX 개선**: Material Design 3 하단 탭 네비게이션
+- 📝 **문서 업데이트**: README.md, CLAUDE.md 최신화
+- 📝 **구현 가이드 추가**: BENEFITS_TAB_IMPLEMENTATION.md
+
 ### v1.1.0 (2025-01-11)
 - ✨ SDK 수동 초기화 기능 추가
 - ✨ Skip Login 테스트 모드 추가
@@ -626,6 +711,6 @@ python $ANDROID_HOME/platform-tools/systrace/systrace.py \
 
 ---
 
-**최종 업데이트**: 2025-01-11
+**최종 업데이트**: 2025-01-30
 **작성자**: AdChain Development Team
-**문서 버전**: 1.1.0
+**문서 버전**: 1.2.0
