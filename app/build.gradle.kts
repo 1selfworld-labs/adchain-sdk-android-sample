@@ -62,7 +62,7 @@ dependencies {
     
     // Adchain SDK - Using remote JitPack version
     // implementation(project(":adchain-sdk"))
-    implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.32")
+    implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.33")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -39,7 +39,7 @@ class SampleApplication : Application() {
 
         // Actual SDK initialization
         val config = AdchainSdkConfig.Builder(APP_ID, APP_SECRET)
-            .setEnvironment(AdchainSdkConfig.Environment.PRODUCTION) // Use PRODUCTION for release
+            .setEnvironment(AdchainSdkConfig.Environment.STAGING) // Use PRODUCTION for release
             .setTimeout(30000L) // 30 seconds timeout
             .build()
 
