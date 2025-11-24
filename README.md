@@ -63,6 +63,8 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 ### 5. Mission 시스템
 - Mission 목록 표시
 - Mission 진행 상태 추적
+- Mission 이벤트 리스너 (완료, 진행, 새로고침)
+- 인스턴스 재사용 패턴으로 메모리 효율 개선
 - Offerwall 프로모션 연동
 - 보상 시스템
 
@@ -474,32 +476,135 @@ class QuizActivity : AppCompatActivity() {
 
 ```kotlin
 // MissionActivity.kt
-class MissionActivity : AppCompatActivity() {
+class MissionActivity : AppCompatActivity(), AdchainMissionEventsListener {
 
     private var adchainMission: AdchainMission? = null
 
-    private fun loadMissions() {
+    private fun loadMissionData() {
+        Log.d(TAG, "Loading mission data...")
+        showLoadingState()
+
         // AdchainMission 인스턴스 생성
         adchainMission = AdchainMission()
+
+        // 이벤트 리스너 등록
+        adchainMission?.setEventsListener(this)
 
         // Mission 목록 조회
         adchainMission?.getMissionList(
             onSuccess = { missions ->
                 runOnUiThread {
-                    if (missions.isEmpty()) {
-                        showEmptyState()
-                    } else {
-                        showMissionList(missions)
-                    }
+                    // Mission 상태도 함께 조회
+                    adchainMission?.getMissionStatus(
+                        onSuccess = { status ->
+                            runOnUiThread {
+                                updateProgress(MissionProgress(status.current, status.total))
+                                when {
+                                    status.isCompleted && status.total > 0 -> showRewardState()
+                                    missions.isEmpty() -> showEmptyState()
+                                    else -> showSuccessState(missions)
+                                }
+                            }
+                        },
+                        onFailure = { error ->
+                            // 상태 조회 실패 시에도 미션 목록은 표시
+                            if (missions.isNotEmpty()) {
+                                showSuccessState(missions)
+                            } else {
+                                showEmptyState()
+                            }
+                        }
+                    )
                 }
             },
             onFailure = { error ->
                 Log.e(TAG, "Failed to load missions: $error")
                 runOnUiThread {
-                    showErrorState(error)
+                    showErrorState()
                 }
             }
         )
+    }
+
+    // 기존 인스턴스 재사용 - 메모리 효율적
+    private fun refreshMissionData() {
+        Log.d(TAG, "Refreshing mission data (reusing existing instance)...")
+        showLoadingState()
+
+        // ✅ 기존 인스턴스 재사용 (새로 만들지 않음)
+        adchainMission?.getMissionList(
+            onSuccess = { missions ->
+                runOnUiThread {
+                    adchainMission?.getMissionStatus(
+                        onSuccess = { status ->
+                            runOnUiThread {
+                                updateProgress(MissionProgress(status.current, status.total))
+                                when {
+                                    status.isCompleted && status.total > 0 -> showRewardState()
+                                    missions.isEmpty() -> showEmptyState()
+                                    else -> showSuccessState(missions)
+                                }
+                            }
+                        },
+                        onFailure = { error ->
+                            if (missions.isNotEmpty()) {
+                                showSuccessState(missions)
+                            } else {
+                                showEmptyState()
+                            }
+                        }
+                    )
+                }
+            },
+            onFailure = { error ->
+                runOnUiThread {
+                    showErrorState()
+                }
+            }
+        )
+    }
+
+    // ========== 이벤트 리스너 구현 ==========
+
+    override fun onCompleted(mission: Mission) {
+        Log.d(TAG, "✅ Mission completed: ${mission.id}")
+        runOnUiThread {
+            Toast.makeText(this, "Mission completed! Refreshing list...", Toast.LENGTH_SHORT).show()
+            refreshMissionData()  // 자동 갱신
+        }
+    }
+
+    override fun onProgressed(mission: Mission) {
+        Log.d(TAG, "Mission progressed: ${mission.id}")
+        runOnUiThread {
+            // 빈번한 이벤트이므로 UI만 업데이트
+            missionAdapter.notifyDataSetChanged()
+        }
+    }
+
+    override fun onRefreshed(unitId: String?) {
+        Log.d(TAG, "🔄 Mission list refreshed (unitId: $unitId)")
+        runOnUiThread {
+            Toast.makeText(this, "Refreshing mission list...", Toast.LENGTH_SHORT).show()
+            refreshMissionData()  // 데이터 갱신
+        }
+    }
+
+    override fun onClicked(mission: Mission) {
+        Log.d(TAG, "Mission clicked: ${mission.id}")
+        // SDK가 자동으로 WebView 열기 처리
+    }
+
+    override fun onImpressed(mission: Mission) {
+        Log.d(TAG, "Mission impressed: ${mission.id}")
+        // SDK가 자동으로 impression 추적
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 리소스 정리
+        adchainMission?.destroy()
+        adchainMission = null
     }
 }
 ```
@@ -902,10 +1007,27 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 
 ### 7. Mission 테스트
 
+**정상 플로우:**
 1. 홈 탭에서 "Mission System Test" 클릭
 2. Mission 목록 로딩 확인
 3. Mission 진행 상태 확인
-4. Offerwall 프로모션 클릭하여 Offerwall 이동
+4. Mission 클릭하여 WebView 열기
+5. Offerwall 프로모션 클릭하여 Offerwall 이동
+
+**이벤트 리스너 테스트:**
+1. Mission 완료 시 자동 리스트 갱신 확인
+   - WebView에서 미션 완료
+   - Toast: "Mission completed! Refreshing list..."
+   - 자동으로 미션 목록 갱신됨
+2. Mission 진행 시 UI 업데이트 확인
+   - 진행 상태 변경 시 어댑터 자동 갱신
+3. WebView에서 새로고침 메시지 수신 시 확인
+   - Toast: "Refreshing mission list..."
+   - 자동으로 미션 데이터 갱신됨
+
+**메모리 효율 확인:**
+- Logcat에서 "Refreshing mission data (reusing existing instance)" 확인
+- 인스턴스 재생성 없이 데이터만 갱신되는지 확인
 
 ### 8. Offerwall 테스트 (팝업 방식)
 
@@ -1095,5 +1217,5 @@ adb logcat -s AdchainSdk:V okhttp:D
 
 ---
 
-**최종 업데이트**: 2025-01-30
-**버전**: v1.2.0 - 탭 기반 UI 및 AdchainOfferwallView 통합
+**최종 업데이트**: 2025-01-24
+**버전**: v1.3.0 - Mission 이벤트 리스너 및 인스턴스 재사용 패턴 구현

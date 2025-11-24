@@ -294,6 +294,168 @@ val linkUrl = bannerResponse.internalLinkUrl
     ?: "N/A"
 ```
 
+### 5. Mission 이벤트 리스너 구현 (v1.3.0)
+
+**변경 이유**: iOS/React Native 샘플과 동일한 이벤트 처리 패턴 적용, 메모리 효율 개선
+
+#### 문제점 분석
+
+**Before (v1.2.0)**:
+- MissionActivity에 이벤트 리스너 미구현
+- Mission 완료/새로고침 시 자동 갱신 없음
+- 수동으로 새로고침 버튼 클릭 필요
+
+#### 개선 내용
+
+##### 1. AdchainMissionEventsListener 구현
+```kotlin
+// MissionActivity.kt
+class MissionActivity : AppCompatActivity(), AdchainMissionEventsListener {
+
+    override fun onCompleted(mission: Mission) {
+        Log.d(TAG, "✅ Mission completed: ${mission.id}")
+        runOnUiThread {
+            Toast.makeText(this, "Mission completed! Refreshing list...", Toast.LENGTH_SHORT).show()
+            refreshMissionData()  // 자동 갱신
+        }
+    }
+
+    override fun onProgressed(mission: Mission) {
+        Log.d(TAG, "Mission progressed: ${mission.id}")
+        runOnUiThread {
+            // 빈번한 이벤트이므로 UI만 업데이트
+            missionAdapter.notifyDataSetChanged()
+        }
+    }
+
+    override fun onRefreshed(unitId: String?) {
+        Log.d(TAG, "🔄 Mission list refreshed (unitId: $unitId)")
+        runOnUiThread {
+            Toast.makeText(this, "Refreshing mission list...", Toast.LENGTH_SHORT).show()
+            refreshMissionData()  // 데이터 갱신
+        }
+    }
+
+    override fun onClicked(mission: Mission) {
+        Log.d(TAG, "Mission clicked: ${mission.id}")
+        // SDK가 자동으로 WebView 열기 처리
+    }
+
+    override fun onImpressed(mission: Mission) {
+        Log.d(TAG, "Mission impressed: ${mission.id}")
+        // SDK가 자동으로 impression 추적
+    }
+}
+```
+
+##### 2. refreshMissionData() 메서드 - 인스턴스 재사용 패턴
+```kotlin
+private fun refreshMissionData() {
+    Log.d(TAG, "Refreshing mission data (reusing existing instance)...")
+    showLoadingState()
+
+    // ✅ 기존 AdchainMission 인스턴스 재사용 (새로 만들지 않음!)
+    adchainMission?.getMissionList(
+        onSuccess = { missions ->
+            runOnUiThread {
+                // 미션 상태도 함께 조회
+                adchainMission?.getMissionStatus(
+                    onSuccess = { status ->
+                        runOnUiThread {
+                            // 진행 상태 UI 업데이트
+                            val progress = MissionProgress(status.current, status.total)
+                            updateProgress(progress)
+
+                            when {
+                                status.isCompleted && status.total > 0 -> showRewardState()
+                                missions.isEmpty() -> showEmptyState()
+                                else -> showSuccessState(missions)
+                            }
+                        }
+                    },
+                    onFailure = { error ->
+                        // 에러 처리
+                    }
+                )
+            }
+        },
+        onFailure = { error ->
+            runOnUiThread {
+                showErrorState()
+            }
+        }
+    )
+}
+```
+
+##### 3. loadMissionData() vs refreshMissionData()
+
+**loadMissionData()** - 초기 로드:
+- 새로운 `AdchainMission()` 인스턴스 생성
+- 이벤트 리스너 등록
+- 어댑터 초기화
+- onCreate()나 재시도 버튼에서 호출
+
+**refreshMissionData()** - 데이터 갱신:
+- 기존 인스턴스 재사용 (**메모리 효율**)
+- 인스턴스 생성 안 함
+- 리스너 재등록 안 함
+- 어댑터 재생성 안 함
+- onCompleted(), onRefreshed()에서 호출
+
+#### 해결된 문제
+
+##### 1. ConcurrentModificationException 방지
+```kotlin
+// 문제가 있던 패턴 (onRefreshed에서 새 인스턴스 생성):
+override fun onRefreshed(unitId: String?) {
+    loadMissionData()  // ❌ 새 인스턴스 생성
+    // → activeMissionInstances 리스트 순회 중 수정
+    // → ConcurrentModificationException 발생!
+}
+
+// 올바른 패턴 (기존 인스턴스 재사용):
+override fun onRefreshed(unitId: String?) {
+    refreshMissionData()  // ✅ 기존 인스턴스 재사용
+    // → 리스트 수정 없음
+    // → 안전!
+}
+```
+
+##### 2. 메모리 효율 개선
+- 불필요한 인스턴스 생성 방지
+- 이벤트 리스너 중복 등록 방지
+- `activeMissionInstances` 리스트 크기 최소화
+
+##### 3. UI 반응성 향상
+- Mission 완료 시 자동 리스트 갱신
+- WebView에서 missionRefreshed 메시지 수신 시 자동 갱신
+- 진행 상태 업데이트 시 UI만 빠르게 갱신
+
+#### onProgressed 최적화
+
+진행 상태 업데이트는 빈번하게 발생할 수 있으므로, 전체 API 재호출 대신 **UI만 업데이트**:
+
+```kotlin
+override fun onProgressed(mission: Mission) {
+    runOnUiThread {
+        // ❌ refreshMissionData() 호출하지 않음 (너무 빈번)
+        // ✅ UI만 업데이트
+        missionAdapter.notifyDataSetChanged()
+    }
+}
+```
+
+#### iOS/React Native와의 일관성
+
+| 플랫폼 | onCompleted | onRefreshed | onProgressed |
+|--------|-------------|-------------|--------------|
+| **iOS** | `loadMissionData()` | `loadMissionData()` | 구현 안 함 |
+| **React Native** | `loadMissionList()` | `loadMissionList()` | 구현 안 함 |
+| **Android (v1.3.0)** | `refreshMissionData()` | `refreshMissionData()` | `notifyDataSetChanged()` |
+
+**패턴 개선**: Android는 인스턴스 재사용으로 iOS보다 **더 효율적**
+
 ## 빌드 및 실행
 
 ### 요구사항
@@ -477,6 +639,9 @@ repositories {
 - [x] Quiz Empty State 처리
 - [x] Mission 목록 표시
 - [x] Mission 진행 상태 업데이트
+- [x] Mission 이벤트 리스너 (onCompleted, onRefreshed, onProgressed)
+- [x] Mission 인스턴스 재사용 패턴
+- [x] ConcurrentModificationException 방지
 - [x] Offerwall 표시 및 상호작용
 - [x] Offerwall Callback 처리 (Open, Close, Error, Reward)
 - [x] Banner 데이터 조회 및 표시
@@ -676,6 +841,16 @@ python $ANDROID_HOME/platform-tools/systrace/systrace.py \
 
 ## 변경 로그
 
+### v1.3.0 (2025-01-24)
+- ✨ MissionActivity에 AdchainMissionEventsListener 구현 추가
+- ✨ refreshMissionData() 메서드로 인스턴스 재사용 패턴 도입
+- 🐛 ConcurrentModificationException 수정 (인스턴스 생성 최소화)
+- ✨ onCompleted() 이벤트에서 자동 미션 리스트 갱신
+- ✨ onRefreshed() 이벤트에서 미션 데이터 갱신
+- ✨ onProgressed() 이벤트에서 UI만 업데이트
+- 🎨 메모리 효율 개선 및 불필요한 인스턴스 생성 방지
+- 📝 iOS/React Native 샘플과 동일한 이벤트 처리 패턴 적용
+
 ### v1.2.0 (2025-01-30)
 - 🎨 **아키텍처 변경**: Single Activity → Multi Activity + Fragment 구조
 - ✨ **LoginActivity 추가**: 로그인 전용 화면 분리
@@ -711,6 +886,6 @@ python $ANDROID_HOME/platform-tools/systrace/systrace.py \
 
 ---
 
-**최종 업데이트**: 2025-01-30
+**최종 업데이트**: 2025-01-24
 **작성자**: AdChain Development Team
-**문서 버전**: 1.2.0
+**문서 버전**: 1.3.0

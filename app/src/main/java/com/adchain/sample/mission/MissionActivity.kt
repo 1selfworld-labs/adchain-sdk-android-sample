@@ -15,12 +15,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.adchain.sample.R
 import com.adchain.sdk.mission.AdchainMission
+import com.adchain.sdk.mission.AdchainMissionEventsListener
 import com.adchain.sdk.mission.MissionStatus
 import com.adchain.sdk.mission.Mission
 import com.adchain.sdk.mission.MissionProgress
 import com.adchain.sdk.common.AdchainAdError
+import android.widget.Toast
 
-class MissionActivity : AppCompatActivity() {
+class MissionActivity : AppCompatActivity(), AdchainMissionEventsListener {
     
     companion object {
         private const val TAG = "MissionActivity"
@@ -106,10 +108,13 @@ class MissionActivity : AppCompatActivity() {
     private fun loadMissionData() {
         Log.d(TAG, "Loading mission data...")
         showLoadingState()
-        
+
         // Initialize AdchainMission
         adchainMission = AdchainMission()
-        
+
+        // Set up event listener
+        adchainMission?.setEventsListener(this)
+
         // Set up mission adapter
         missionAdapter = MissionAdapter(this, adchainMission!!)
         missionRecyclerView.adapter = missionAdapter
@@ -164,7 +169,62 @@ class MissionActivity : AppCompatActivity() {
             }
         )
     }
-    
+
+    private fun refreshMissionData() {
+        Log.d(TAG, "Refreshing mission data (reusing existing instance)...")
+        showLoadingState()
+
+        // Reuse existing AdchainMission instance - don't create a new one
+        adchainMission?.getMissionList(
+            onSuccess = { missions ->
+                runOnUiThread {
+                    // Get mission status separately
+                    adchainMission?.getMissionStatus(
+                        onSuccess = { status ->
+                            runOnUiThread {
+                                // Update progress UI
+                                val progress = MissionProgress(status.current, status.total)
+                                updateProgress(progress)
+
+                                when {
+                                    status.isCompleted && status.total > 0 -> {
+                                        Log.d(TAG, "All missions completed (${status.current}/${status.total}), showing reward button")
+                                        showRewardState()
+                                    }
+                                    missions.isEmpty() -> {
+                                        Log.d(TAG, "No missions available")
+                                        showEmptyState()
+                                    }
+                                    else -> {
+                                        Log.d(TAG, "Refreshed ${missions.size} missions")
+                                        showSuccessState(missions)
+                                    }
+                                }
+                            }
+                        },
+                        onFailure = { error ->
+                            runOnUiThread {
+                                Log.e(TAG, "Failed to get mission status: ${error.message}")
+                                // Still show missions if we have them
+                                if (missions.isNotEmpty()) {
+                                    showSuccessState(missions)
+                                } else {
+                                    showEmptyState()
+                                }
+                            }
+                        }
+                    )
+                }
+            },
+            onFailure = { error ->
+                runOnUiThread {
+                    Log.e(TAG, "Failed to refresh missions: ${error.message}")
+                    showErrorState()
+                }
+            }
+        )
+    }
+
     private fun updateProgress(progress: MissionProgress) {
         Log.d(TAG, "Updating progress: ${progress.current}/${progress.total}")
         
@@ -271,5 +331,49 @@ class MissionActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         onBackPressed()
         return true
+    }
+
+    // ========== AdchainMissionEventsListener Implementation ==========
+
+    override fun onImpressed(mission: Mission) {
+        Log.d(TAG, "Mission impressed: ${mission.id}")
+        // SDK automatically tracks impression, no additional action needed
+    }
+
+    override fun onClicked(mission: Mission) {
+        Log.d(TAG, "Mission clicked: ${mission.id}")
+        // SDK automatically opens WebView, no additional action needed
+    }
+
+    override fun onCompleted(mission: Mission) {
+        Log.d(TAG, "✅ Mission completed: ${mission.id}")
+        runOnUiThread {
+            Toast.makeText(this, "Mission completed! Refreshing list...", Toast.LENGTH_SHORT).show()
+            refreshMissionData()  // Reuse existing instance
+        }
+    }
+
+    override fun onProgressed(mission: Mission) {
+        Log.d(TAG, "Mission progressed: ${mission.id}")
+        // Only update UI, don't reload entire list (progress events can be frequent)
+        runOnUiThread {
+            missionAdapter.notifyDataSetChanged()
+        }
+    }
+
+    override fun onRefreshed(unitId: String?) {
+        Log.d(TAG, "🔄 Mission list refreshed (unitId: $unitId)")
+        runOnUiThread {
+            Toast.makeText(this, "Refreshing mission list...", Toast.LENGTH_SHORT).show()
+            refreshMissionData()  // Reuse existing instance
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clean up to prevent memory leaks
+        adchainMission?.destroy()
+        adchainMission = null
+        Log.d(TAG, "Mission instance destroyed")
     }
 }
