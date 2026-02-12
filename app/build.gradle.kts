@@ -41,6 +41,11 @@ android {
     }
 }
 
+// SNAPSHOT 캐시 무효화 - 항상 최신 dev 빌드 가져옴
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+}
+
 dependencies {
     // Core Android dependencies
     implementation("androidx.core:core-ktx:1.12.0")
@@ -60,9 +65,10 @@ dependencies {
     // Image Loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
     
-    // Adchain SDK - Using remote JitPack version
+    // Adchain SDK - dev: main-SNAPSHOT, release: v1.0.34
     // implementation(project(":adchain-sdk"))
-    implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.33")
+    // implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.34")
+    implementation("com.github.1selfworld-labs:adchain-sdk-android:main-SNAPSHOT")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

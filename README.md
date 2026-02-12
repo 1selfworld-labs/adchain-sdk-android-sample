@@ -16,6 +16,7 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 ## 🎯 프로젝트 개요
 
 이 샘플 앱은 AdChain SDK의 다음 기능들을 시연합니다:
+
 - SDK 초기화 및 사용자 인증
 - Quiz 시스템 통합
 - Mission 시스템 통합
@@ -30,18 +31,20 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 - **최소 SDK**: 24 (Android 7.0 Nougat)
 - **타겟 SDK**: 35 (Android 15)
 - **빌드 도구**: Gradle 8.5
-- **SDK 배포**: JitPack (v1.0.32)
+- **SDK 배포**: JitPack (v1.0.34)
 - **아키텍처**: Multi-Activity + Fragment, Material Design 3, BottomNavigationView
 
 ## ✨ 주요 기능
 
 ### 1. 탭 기반 UI (NEW v1.2.0)
+
 - **홈 탭**: 기존 SDK 테스트 기능 (Quiz, Mission, Offerwall 등)
 - **혜택 탭**: AdchainOfferwallView 통합 - WebView 기반 오퍼월 화면
 - **BottomNavigationView**: Material Design 3 스타일 하단 탭
 - **로그인 화면 분리**: LoginActivity로 인증 플로우 독립
 
 ### 2. SDK 초기화 제어
+
 - **수동 초기화**: "Initialize SDK" 버튼을 통한 명시적 SDK 초기화
 - **Skip Login**: SDK 미초기화 상태에서 graceful error handling 테스트
 - **3가지 플로우 지원**:
@@ -50,17 +53,20 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
   - 혼합 플로우: Initialize SDK → Skip Login
 
 ### 3. 사용자 인증
+
 - 사용자 ID 기반 로그인
 - 사용자 프로필 정보 설정 (성별, 출생년도, 커스텀 속성)
 - 로그아웃 기능
 
 ### 4. Quiz 시스템
+
 - Quiz 목록 조회
 - Quiz 참여 및 완료
 - 보상 획득
 - Empty state 처리
 
 ### 5. Mission 시스템
+
 - Mission 목록 표시
 - Mission 진행 상태 추적
 - Mission 이벤트 리스너 (완료, 진행, 새로고침)
@@ -69,28 +75,33 @@ AdChain SDK의 주요 기능을 시연하고 통합 방법을 보여주는 Andro
 - 보상 시스템
 
 ### 6. Offerwall
+
 - Offerwall 화면 표시 (팝업 방식)
 - Placement ID 기반 오퍼월 관리
 - 콜백 처리 (Open, Close, Error, Reward)
 
 ### 7. AdchainOfferwallView (NEW v1.2.0)
+
 - **WebView 기반 오퍼월**: 혜택 탭에 내장된 웹뷰
 - **백버튼 처리**: handleBackPress()로 WebView 네비게이션 관리
 - **이벤트 콜백**: onCustomEvent, onDataRequest 지원
 - **Placement ID**: "sample-test-android-placement"
 
 ### 8. Banner 광고
+
 - Banner 데이터 조회
 - 내부/외부 링크 처리
 - 이미지 표시
 
 ### 9. Adjoe Offerwall
+
 - Adjoe 플랫폼 기반 오퍼월
 - Placement ID 기반 관리
 - 콜백 처리 (Open, Close, Error, Reward)
 - 사용자 프로필 연동 (Gender/Age)
 
 ### 10. App Launch Test
+
 - WebView에서 앱 설치 여부 확인 테스트
 - 클립보드를 통한 테스트 코드 자동 복사
 - JavaScript Bridge 테스트 지원
@@ -157,6 +168,7 @@ adchain-sdk-android-sample/
 ### 설치 및 실행
 
 1. **프로젝트 클론**
+
    ```bash
    git clone https://github.com/1selfworld-labs/adchain-sdk-android-sample.git
    cd adchain-sdk-android-sample
@@ -169,17 +181,18 @@ adchain-sdk-android-sample/
    #### JitPack 배포 버전 사용 (권장)
 
    `app/build.gradle.kts` 파일에서 SDK 버전 확인:
+
    ```kotlin
    dependencies {
-       implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.32")
+       implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.34")
    }
    ```
 
    #### 로컬 모듈 참조 (SDK 개발 시)
 
    SDK를 직접 수정하고 테스트하려면 로컬 모듈로 참조할 수 있습니다:
-
    1. `settings.gradle.kts` 파일 수정:
+
       ```kotlin
       include(":adchain-sdk")
       project(":adchain-sdk").projectDir = file("../adchain-sdk-android/adchain-sdk")
@@ -188,7 +201,7 @@ adchain-sdk-android-sample/
    2. `app/build.gradle.kts` 파일 수정:
       ```kotlin
       dependencies {
-          // implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.23")
+          // implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.34")
           implementation(project(":adchain-sdk"))
       }
       ```
@@ -196,12 +209,14 @@ adchain-sdk-android-sample/
 3. **앱 키 설정**
 
    `app/src/main/java/com/adchain/sample/SampleApplication.kt` 파일에서 앱 키를 설정합니다:
+
    ```kotlin
    private const val APP_ID = "your_app_id"
    private const val APP_SECRET = "your_app_secret"
    ```
 
 4. **Android Studio에서 프로젝트 열기**
+
    ```bash
    # Android Studio가 설치된 경우
    open -a "Android Studio" .
@@ -358,11 +373,11 @@ adjoeButton.setOnClickListener {
 
 #### API 파라미터
 
-| 파라미터 | 타입 | 설명 | 필수 |
-|---------|------|------|------|
-| `context` | `Context` | Activity 컨텍스트 | ✅ |
-| `placementId` | `String` | Adjoe Placement ID | ✅ |
-| `callback` | `OfferwallCallback` | 이벤트 콜백 | ✅ |
+| 파라미터      | 타입                | 설명               | 필수 |
+| ------------- | ------------------- | ------------------ | ---- |
+| `context`     | `Context`           | Activity 컨텍스트  | ✅   |
+| `placementId` | `String`            | Adjoe Placement ID | ✅   |
+| `callback`    | `OfferwallCallback` | 이벤트 콜백        | ✅   |
 
 #### OfferwallCallback 인터페이스
 
@@ -393,10 +408,10 @@ AdchainSdk.login(user, loginListener)
 
 **지원되는 값:**
 
-| 속성 | 타입 | 설명 | 필수 여부 |
-|------|------|------|-----------|
-| `gender` | `AdchainSdkUser.Gender` | `MALE` 또는 `FEMALE` | 선택 |
-| `birthYear` | `Int` | 출생년도 (예: 1990) | 선택 |
+| 속성        | 타입                    | 설명                 | 필수 여부 |
+| ----------- | ----------------------- | -------------------- | --------- |
+| `gender`    | `AdchainSdkUser.Gender` | `MALE` 또는 `FEMALE` | 선택      |
+| `birthYear` | `Int`                   | 출생년도 (예: 1990)  | 선택      |
 
 **중요 사항:**
 
@@ -765,20 +780,22 @@ WebView에서 사용 가능한 API:
 window.AdchainBridge.checkAppInstalled('com.instagram.android');
 
 // 결과 콜백 등록
-window.onAppInstalledResult = function(result) {
-    console.log('Installed:', result.installed);
-    console.log('Identifier:', result.identifier);
+window.onAppInstalledResult = function (result) {
+  console.log('Installed:', result.installed);
+  console.log('Identifier:', result.identifier);
 };
 ```
 
 #### 테스트 예시
 
 1. **Instagram 설치 여부 확인**
+
    ```javascript
    window.AdchainBridge.checkAppInstalled('com.instagram.android');
    ```
 
 2. **YouTube 설치 여부 확인**
+
    ```javascript
    window.AdchainBridge.checkAppInstalled('com.google.android.youtube');
    ```
@@ -802,17 +819,20 @@ Chrome DevTools를 통해 WebView를 디버깅하려면:
 ### LoginActivity (NEW v1.2.0)
 
 **주요 기능:**
+
 - SDK 초기화 제어
 - 사용자 로그인/로그아웃
 - Skip Login (테스트 모드)
 
 **UI 구성:**
+
 - Initialize SDK 버튼
 - User ID 입력 필드
 - Login 버튼
 - Skip Login 버튼
 
 **플로우:**
+
 1. SDK 초기화 (선택)
 2. User ID 입력 후 Login
 3. 또는 Skip Login으로 테스트 모드 진입
@@ -821,26 +841,31 @@ Chrome DevTools를 통해 WebView를 디버깅하려면:
 ### MainActivity (NEW v1.2.0)
 
 **주요 기능:**
+
 - 탭 기반 네비게이션 컨테이너
 - 로그인 상태 확인 및 자동 리디렉션
 - Fragment 관리
 
 **UI 구성:**
+
 - BottomNavigationView (홈/혜택 탭)
 - Fragment Container
 
 **탭 전환:**
+
 - 홈 탭: HomeFragment
 - 혜택 탭: BenefitsFragment
 
 ### HomeFragment (NEW v1.2.0)
 
 **주요 기능:**
+
 - 기존 MainActivity 기능 이관
 - SDK 테스트 메뉴 화면
 - 기능별 화면 이동 (Quiz, Mission, Offerwall, Banner, Adjoe, App Launch Test)
 
 **UI 구성:**
+
 - 사용자 정보 표시
 - 테스트 버튼 그리드
 - 로그아웃 버튼
@@ -848,14 +873,17 @@ Chrome DevTools를 통해 WebView를 디버깅하려면:
 ### BenefitsFragment (NEW v1.2.0)
 
 **주요 기능:**
+
 - AdchainOfferwallView 통합
 - WebView 기반 오퍼월 표시
 - 백버튼 처리 (WebView 네비게이션 관리)
 
 **UI 구성:**
+
 - AdchainOfferwallView (전체 화면)
 
 **이벤트 처리:**
+
 - `onCustomEvent`: WebView에서 발생하는 커스텀 이벤트
 - `onDataRequest`: WebView에서 요청하는 데이터 제공
 - `handleBackPress`: 백버튼 동작 제어
@@ -863,12 +891,14 @@ Chrome DevTools를 통해 WebView를 디버깅하려면:
 ### QuizActivity
 
 **주요 기능:**
+
 - Quiz 목록 표시
 - Quiz 참여 가능 여부 표시
 - Quiz 완료 상태 표시
 - Empty state 및 Retry 기능
 
 **Quiz 아이템 정보:**
+
 - Quiz 제목
 - 보상 포인트
 - 참여 가능/완료 상태
@@ -877,12 +907,14 @@ Chrome DevTools를 통해 WebView를 디버깅하려면:
 ### MissionActivity
 
 **주요 기능:**
+
 - Mission 목록 표시
 - Mission 진행 상태 추적
 - Offerwall 프로모션 표시
 - Empty state 및 Retry 기능
 
 **Mission 타입:**
+
 - 일반 Mission
 - Offerwall 프로모션 Mission
 
@@ -938,6 +970,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 ### 1. 탭 네비게이션 테스트 (NEW v1.2.0)
 
 **정상 플로우:**
+
 1. LoginActivity에서 로그인 완료
 2. MainActivity로 자동 이동
 3. 기본적으로 홈 탭 표시
@@ -946,6 +979,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 6. "홈" 탭 클릭하여 다시 메뉴로 이동
 
 **백버튼 동작:**
+
 1. 혜택 탭에서 오퍼월 페이지 이동
 2. 백버튼 클릭
 3. WebView 스택이 여러 개면 이전 페이지로 이동
@@ -954,18 +988,21 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 ### 2. SDK 초기화 테스트
 
 **정상 플로우:**
+
 1. 앱 실행 (LoginActivity)
 2. "Initialize SDK" 버튼 클릭
 3. Toast: "SDK initialized successfully" 확인
 4. 버튼 상태: "SDK Initialized ✓"
 
 **오류 처리:**
+
 1. 중복 초기화 시도
 2. Toast: "SDK already initialized" 확인
 
 ### 3. 로그인 테스트
 
 **정상 플로우:**
+
 1. SDK 초기화 완료
 2. User ID 입력 (예: test_user_123)
 3. "Login" 버튼 클릭
@@ -973,12 +1010,14 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 5. MainActivity (탭 화면)로 이동
 
 **오류 처리:**
+
 1. SDK 미초기화 상태에서 로그인 시도
 2. Error: "SDK not initialized" 확인
 
 ### 4. Skip Login 테스트
 
 **테스트 플로우:**
+
 1. 앱 실행 (LoginActivity)
 2. "Initialize SDK" 버튼 클릭 (선택)
 3. "Skip Login (Test without initialization)" 버튼 클릭
@@ -988,12 +1027,14 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 ### 5. AdchainOfferwallView 테스트 (NEW v1.2.0)
 
 **정상 플로우:**
+
 1. MainActivity 혜택 탭 클릭
 2. AdchainOfferwallView 로딩 확인
 3. WebView에서 페이지 이동
 4. 백버튼으로 네비게이션 확인
 
 **이벤트 콜백 확인:**
+
 1. 혜택 탭에서 WebView 페이지 이동
 2. Logcat에서 onCustomEvent 로그 확인
 3. WebView에서 데이터 요청 시 onDataRequest 호출 확인
@@ -1008,6 +1049,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 ### 7. Mission 테스트
 
 **정상 플로우:**
+
 1. 홈 탭에서 "Mission System Test" 클릭
 2. Mission 목록 로딩 확인
 3. Mission 진행 상태 확인
@@ -1015,6 +1057,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 5. Offerwall 프로모션 클릭하여 Offerwall 이동
 
 **이벤트 리스너 테스트:**
+
 1. Mission 완료 시 자동 리스트 갱신 확인
    - WebView에서 미션 완료
    - Toast: "Mission completed! Refreshing list..."
@@ -1026,6 +1069,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
    - 자동으로 미션 데이터 갱신됨
 
 **메모리 효율 확인:**
+
 - Logcat에서 "Refreshing mission data (reusing existing instance)" 확인
 - 인스턴스 재생성 없이 데이터만 갱신되는지 확인
 
@@ -1045,18 +1089,21 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 ### 10. Adjoe Offerwall 테스트
 
 **정상 플로우:**
+
 1. 홈 탭에서 "Adjoe Offerwall Test" 클릭
 2. Adjoe Offerwall 화면 열림 확인
 3. 광고 참여 및 보상 획득
 4. Offerwall 닫기
 
 **콜백 확인:**
+
 - onOpened: Logcat에서 "Adjoe Offerwall opened successfully" 확인
 - onClosed: 닫기 시 "Adjoe Offerwall closed by user" 확인
 - onRewardEarned: 보상 획득 시 Toast 메시지 "Adjoe reward: X points!" 확인
 - onError: 오류 발생 시 Toast 메시지 "Adjoe Error: ..." 확인
 
 **테스트 포인트:**
+
 - SDK 미초기화 상태에서 접근 시 graceful error handling
 - 로그인 시 제공한 Gender/Age 정보가 Adjoe에 전달되는지 확인
 - Adjoe 광고 목록 및 리워드 시스템 정상 동작 확인
@@ -1064,6 +1111,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 ### 11. App Launch Test
 
 **정상 플로우:**
+
 1. Package Name 입력 (예: `com.instagram.android`)
 2. "Add Test Button to Offerwall" 버튼 클릭
 3. 테스트 코드가 클립보드에 복사됨
@@ -1074,6 +1122,7 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 8. Alert으로 설치 여부 확인
 
 **테스트 예시:**
+
 - Instagram: `com.instagram.android`
 - YouTube: `com.google.android.youtube`
 - Facebook: `com.facebook.katana`
@@ -1086,11 +1135,13 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 #### 1. SDK 모듈을 찾을 수 없음
 
 **증상:**
+
 ```
 > Could not resolve project :adchain-sdk
 ```
 
 **해결:**
+
 - `settings.gradle.kts`에서 SDK 경로 확인
 - 상위 폴더에 `adchain-sdk-android` 프로젝트 존재 확인
 - Gradle Sync 재실행
@@ -1098,11 +1149,13 @@ adb logcat --pid=$(adb shell pidof -s com.adchain.sample)
 #### 2. 빌드 오류 - Lint 에러
 
 **증상:**
+
 ```
 Execution failed for task ':app:lint'
 ```
 
 **해결:**
+
 ```bash
 # Lint 검사 건너뛰고 빌드
 ./gradlew assembleDebug -x lint
@@ -1119,22 +1172,26 @@ android {
 #### 3. Network Error - Cleartext Traffic
 
 **증상:**
+
 ```
 java.net.UnknownServiceException: CLEARTEXT communication not permitted
 ```
 
 **해결:**
+
 - `AndroidManifest.xml`에서 `usesCleartextTraffic="true"` 확인
 - `res/xml/network_security_config.xml` 설정 확인
 
 #### 4. SDK 초기화 실패
 
 **증상:**
+
 ```
 Login failed: NOT_INITIALIZED
 ```
 
 **해결:**
+
 1. "Initialize SDK" 버튼을 먼저 클릭했는지 확인
 2. Toast 메시지 "SDK initialized successfully" 확인
 3. 앱 재시작 후 다시 시도
@@ -1142,6 +1199,7 @@ Login failed: NOT_INITIALIZED
 #### 5. Gradle Sync 실패
 
 **해결:**
+
 ```bash
 # Gradle 캐시 클리어
 ./gradlew clean
@@ -1217,5 +1275,5 @@ adb logcat -s AdchainSdk:V okhttp:D
 
 ---
 
-**최종 업데이트**: 2025-01-24
-**버전**: v1.3.0 - Mission 이벤트 리스너 및 인스턴스 재사용 패턴 구현
+**최종 업데이트**: 2026-02-12
+**SDK 버전**: v1.0.34
