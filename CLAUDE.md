@@ -1,5 +1,27 @@
 # AdChain SDK Android Sample - 개발자 가이드
 
+## ⚠️ 절대 원칙
+- 이 워커는 할당된 디렉토리 내에서만 파일을 수정한다
+- 다른 레포의 파일은 읽기만 가능하며, 수정이 필요하면 오케스트레이터에게 보고한다
+
+## Team Context
+- **Worker ID**: `android-sample`
+- **Orchestrator**: 상위 디렉토리 (`adchain-sdk/`)
+- **담당 범위**: `adchain-sdk-android-sample/` (AdChain Android 샘플앱)
+- **Upstream**: `adchain-sdk-android` (로컬 모듈로 직접 참조)
+- **Downstream**: 없음 (최종 소비자)
+
+### Agent Teams 프로토콜
+- 팀 설정 파일: `~/.claude/teams/adchain-sdk/config.json`에서 팀원 목록 확인
+- 작업 확인: TaskList → TaskGet으로 할당된 작업의 상세 내용 확인
+- 작업 시작: TaskUpdate(status: "in_progress") → 작업 수행
+- 작업 완료: TaskUpdate(status: "completed") → TaskList로 다음 작업 확인
+- 오케스트레이터 보고: SendMessage(type: "message", recipient: "team-lead", content: "...", summary: "...")
+- 다른 워커 문의: SendMessage(type: "message", recipient: "{워커-name}", content: "...", summary: "...")
+- 종료 요청 수신 시: SendMessage(type: "shutdown_response", request_id: "{id}", approve: true)
+
+---
+
 ## 프로젝트 개요
 
 AdChain SDK Android 샘플 애플리케이션으로, SDK의 주요 기능들을 테스트하고 통합 방법을 보여주는 예제 프로젝트입니다.
