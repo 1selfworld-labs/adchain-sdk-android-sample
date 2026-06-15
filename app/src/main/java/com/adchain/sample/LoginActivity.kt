@@ -91,7 +91,6 @@ class LoginActivity : AppCompatActivity() {
         val user = AdchainSdkUser.Builder(userId)
             .setGender(AdchainSdkUser.Gender.MALE)
             .setBirthYear(1990)
-            .setCustomProperty("test_user", "true")
             .build()
 
         AdchainSdk.login(user, object : AdchainSdkLoginListener {
