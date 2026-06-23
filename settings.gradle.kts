@@ -10,8 +10,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // JitPack repository for AdChain SDK
-        maven { url = uri("https://jitpack.io") }
+        // JitPack repository for AdChain SDK (private repo → auth required)
+        maven {
+            url = uri("https://jitpack.io")
+            credentials {
+                username = "jp_token"
+                password = providers.gradleProperty("authToken").orNull ?: ""
+            }
+        }
         // Adjoe SDK Maven repository
         maven { url = uri("https://releases.adjoe.io/maven") }
     }
