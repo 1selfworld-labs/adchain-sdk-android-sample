@@ -65,10 +65,11 @@ dependencies {
     // Image Loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
     
-    // Adchain SDK - dev: main-SNAPSHOT, release: v1.0.34
+    // Adchain SDK - Core release: mod-1.0.36
     // implementation(project(":adchain-sdk"))
     // implementation("com.github.1selfworld-labs:adchain-sdk-android:v1.0.34")
-    implementation("com.github.1selfworld-labs:adchain-sdk-android:main-SNAPSHOT")
+    // implementation("com.github.1selfworld-labs:adchain-sdk-android:main-SNAPSHOT")
+    implementation("com.github.1selfworld-labs:adchain-sdk-android:mod-1.0.36")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
